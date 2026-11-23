@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "A minimal, local-first headquarters for your side projects: notes, roadmap, planner, store and ads tracking, quick links. Content is plain Markdown in your own git repo.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EngincanV/project-hq.git"
+  },
   "keywords": [
     "side-projects",
     "project-management",

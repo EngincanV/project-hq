@@ -15,7 +15,7 @@ Everything you write is plain Markdown and JSON in your own git repository, and 
 You need [Node.js](https://nodejs.org) 22.22+ or 24.15+ (see `.nvmrc`) and git.
 
 ```sh
-git clone https://github.com/<you>/project-hq.git
+git clone https://github.com/EngincanV/project-hq.git
 cd project-hq
 npm install
 npm start            # serves http://127.0.0.1:4173 with demo content
