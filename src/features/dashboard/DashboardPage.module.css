@@ -1,0 +1,138 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.count {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* Today's list beside the projects on wide screens; stacked (today first) below. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.todayColumn,
+.projectsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+@media (min-width: 1180px) {
+  .body {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+
+  .todayColumn {
+    position: sticky;
+    top: calc(var(--topbar-height) + var(--space-5));
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 272px), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.archived {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.archived > button {
+  margin-left: calc(-1 * var(--space-3));
+  color: var(--color-text-muted);
+}
+
+.archived > ul {
+  align-self: stretch;
+}
+
+.firstRun {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  max-width: 600px;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.firstRunIcon {
+  display: flex;
+  color: var(--color-accent);
+}
+
+.firstRunTitle {
+  font-size: var(--text-xl);
+}
+
+.firstRunText {
+  max-width: 60ch;
+  color: var(--color-text-muted);
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+  align-self: stretch;
+  font-size: var(--text-sm);
+}
+
+.points li {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.points li:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 560px) {
+  .page {
+    gap: var(--space-5);
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .firstRun {
+    padding: var(--space-5) var(--space-4);
+  }
+}

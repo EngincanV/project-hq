@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" width="640" height="240">
+  <rect width="640" height="240" rx="16" fill="#e8f5ef"/>
+  <path d="M0 170 C120 140 200 200 320 170 S520 140 640 175 L640 240 L0 240 Z" fill="#9bd3c0"/>
+  <path d="M60 150 C160 60 260 160 340 90 S520 60 590 120" fill="none" stroke="#0f766e" stroke-width="4" stroke-dasharray="10 8" stroke-linecap="round"/>
+  <g fill="#10b981" stroke="#065f46" stroke-width="3">
+    <circle cx="60" cy="150" r="16"/>
+    <circle cx="190" cy="105" r="16"/>
+    <circle cx="340" cy="90" r="16"/>
+    <circle cx="470" cy="75" r="16"/>
+  </g>
+  <circle cx="590" cy="120" r="20" fill="#f59e0b" stroke="#92400e" stroke-width="3"/>
+  <g font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#064e3b" text-anchor="middle">
+    <text x="60" y="155" fill="#fff">1</text>
+    <text x="190" y="110" fill="#fff">5</text>
+    <text x="340" y="95" fill="#fff">10</text>
+    <text x="470" y="80" fill="#fff">15</text>
+    <text x="590" y="126">20</text>
+    <text x="320" y="225">World 1 · River bank</text>
+  </g>
+</svg>

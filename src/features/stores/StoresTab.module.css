@@ -1,0 +1,134 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.stores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The segmented switch is only for phones; on wider screens both stores show side by side. */
+.switcher {
+  display: none;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.storeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+
+.panelTitle {
+  font-size: var(--text-lg);
+  margin-right: auto;
+}
+
+.disabled {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.launch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.noListing {
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.notesTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+@media (max-width: 1100px) {
+  .columns {
+    gap: var(--space-4);
+  }
+
+  .panel {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 860px) {
+  .switcher {
+    display: block;
+  }
+
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inactive {
+    display: none;
+  }
+}

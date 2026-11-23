@@ -1,0 +1,14 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.store {
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}

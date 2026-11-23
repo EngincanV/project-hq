@@ -1,0 +1,177 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 288px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* The list stays in view while a long note scrolls. */
+@media (min-width: 800px) {
+  .layout > .list {
+    position: sticky;
+    top: calc(var(--topbar-height) + var(--space-4));
+    max-height: calc(100dvh - var(--topbar-height) - var(--space-6));
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---- list ---- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.listHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-field-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-faint);
+}
+
+.search:hover {
+  border-color: var(--color-text-muted);
+}
+
+.search:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.search input:focus-visible {
+  outline: none;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: var(--touch-target);
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+}
+
+.item:hover {
+  background: var(--color-bg-muted);
+  text-decoration: none;
+}
+
+.item:focus-visible {
+  outline-offset: -2px;
+}
+
+.active,
+.active:hover {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
+}
+
+.active .itemTitle {
+  color: var(--color-text);
+}
+
+.itemTitle {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemSnippet {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noMatches {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---- open note ---- */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.paneHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.editor {
+  min-height: 420px;
+}
+
+@media (max-width: 799px) {
+  .layout {
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 799px) {
+  .search {
+    height: var(--touch-target);
+  }
+}

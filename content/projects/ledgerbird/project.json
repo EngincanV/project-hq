@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "Ledgerbird",
+  "tagline": "Simple invoicing for freelancers who hate invoicing",
+  "type": "saas",
+  "status": "building",
+  "emoji": "🐦",
+  "color": "#6366f1",
+  "order": 2,
+  "modules": { "stores": false, "ads": false },
+  "web": { "url": "https://ledgerbird.example" },
+  "links": [
+    { "id": "google-analytics", "label": "Google Analytics", "url": "https://analytics.google.com", "group": "Analytics" },
+    { "id": "search-console", "label": "Google Search Console", "url": "https://search.google.com/search-console", "group": "Analytics" },
+    { "id": "stripe", "label": "Stripe", "url": "https://dashboard.stripe.com", "group": "Payments" },
+    { "id": "vercel", "label": "Vercel", "url": "https://vercel.com/dashboard", "group": "Hosting" }
+  ]
+}

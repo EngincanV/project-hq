@@ -1,0 +1,73 @@
+# Deploys the app (not your content) to GitHub Pages. The hosted build runs in `github` mode: it reads and
+# writes the content repository entered in the app's Settings page (with your token, stored in the browser).
+#
+# To use it on a fork: Settings → Pages → Source: "GitHub Actions"; on a fork also allow workflows in the
+# Actions tab. Then push to main or run this workflow by hand (Actions → Deploy to GitHub Pages → Run).
+#
+# Optional repository variables (Settings → Secrets and variables → Actions → Variables) that only prefill
+# the Settings form: HQ_CONTENT_REPO ("owner/repo" of your content repo) and HQ_CONTENT_BRANCH (default
+# "main"). Nothing secret is ever baked into the build.
+#
+# Where it is served matters. The browser keeps the token and the offline copy of your notes per origin
+# (scheme + host). A project site such as https://<user>.github.io/project-hq/ shares the origin
+# https://<user>.github.io with every other project site of that account, so any page published there could
+# read them. Serve the app from an origin of its own: a custom (sub)domain for this Pages site (Settings →
+# Pages → Custom domain, e.g. hq.example.com), a `<user>.github.io` root repository used only for this app,
+# or a static host that gives each site its own subdomain. The app shows a warning when it detects a
+# project-site URL.
+#
+# Permissions: the build job (which runs `npm ci` and dependency code) only reads; `pages: write` and
+# `id-token: write` are granted to the deploy job alone. Actions are pinned to commit SHAs.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'content/**'
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; never cancel one that is already running.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read # configure-pages reads the site settings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_HQ_REPO: ${{ vars.HQ_CONTENT_REPO || '' }}
+          VITE_HQ_BRANCH: ${{ vars.HQ_CONTENT_BRANCH || 'main' }}
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

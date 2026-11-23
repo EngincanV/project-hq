@@ -1,0 +1,200 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Coral (deal 3/3, seed calm-local-first-workbench-one-a37d·293b3234·2026-11-23·r0) · redesign: full
+ * nav: the shell kept (sidebar with an icon rail, top bar, project tabs) · signature: the week strip and the day's list beside the projects · states: loading, empty, error, full
+ * axes: light/grotesk-sans/warm · posture: restrained · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 · weakest: V, an app shell keeps its familiar sidebar on purpose; the warm paper, ink primary and one coral signal carry the identity instead */
+/* Hallmark · dismissed 10a · the owner asked for a smooth sidebar width change; grid-template-columns eases over 220ms and stops under reduced motion */
+/* Hallmark · dismissed 62 · .sidebarSlot is the closed phone drawer, hidden by design until the menu button opens it; the desktop sidebar is visible without script */
+/* Hallmark · dismissed 56 · the sidebar and the top bar stick in different grid columns, never stacked */
+
+/*
+ * Design tokens. The resolved theme is set on <html data-theme="light|dark"> by src/app/theme.ts;
+ * before that runs, the system preference decides.
+ *
+ * Direction: warm grey paper, near-black warm ink, one coral signal (links, focus, the current tab,
+ * today). The primary action is an ink fill, not a colour. One self-hosted face, Instrument Sans
+ * (OFL, latin + latin-ext so Turkish renders in it). Elevation is lightness: cards sit lighter than
+ * the canvas, the sidebar a step darker.
+ */
+
+:root {
+  /* type: one family; mono only for code, file names and IDs */
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.8125rem; /* 13 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-md: 1rem; /* 16 */
+  --text-lg: 1.2rem; /* 19.2 */
+  --text-xl: 1.44rem; /* 23 */
+  --text-2xl: 1.728rem; /* 27.6 */
+  --leading: 1.5;
+  --leading-prose: 1.65;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 600;
+  --tracking-display: -0.02em;
+  --measure: 72ch;
+
+  /* spacing (4 px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* shape: one radius per nesting level */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 999px;
+
+  /* sizes */
+  --touch-target: 44px;
+  --control-height: 36px;
+  --sidebar-width: 248px;
+  --rail-width: 64px;
+  --topbar-height: 56px;
+  --content-max: 1440px;
+  --content-wide: 1720px;
+  --gutter: var(--space-6);
+
+  /* safe areas (the installed PWA runs under the notch and the home indicator) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* motion: state only */
+  --duration-fast: 120ms;
+  --duration-short: 220ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* layers */
+  --z-sticky: 20;
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  /* light theme (default) */
+  color-scheme: light;
+  --color-bg: oklch(97.3% 0.005 60);
+  --color-bg-subtle: oklch(95.2% 0.006 60);
+  --color-bg-muted: oklch(92.4% 0.008 60);
+  --color-surface: oklch(99.3% 0.003 75);
+  --color-border: oklch(89.5% 0.008 60);
+  --color-border-strong: oklch(82% 0.01 58);
+  --color-field-edge: oklch(64% 0.012 55);
+  --color-text: oklch(22% 0.012 40);
+  --color-text-muted: oklch(47% 0.013 45);
+  --color-text-faint: oklch(53% 0.012 50);
+  --color-accent: oklch(52% 0.15 36);
+  --color-accent-hover: oklch(46% 0.15 36);
+  --color-accent-soft: oklch(94.5% 0.022 40);
+  --color-on-accent: oklch(98.5% 0.004 60);
+  --color-accent-ink: var(--color-on-accent);
+  --color-focus: oklch(55% 0.17 36);
+  --color-primary: oklch(25% 0.012 40);
+  --color-primary-hover: oklch(33% 0.013 40);
+  --color-on-primary: oklch(97.5% 0.005 60);
+  --color-info: oklch(45% 0.12 280);
+  --color-info-soft: oklch(94.5% 0.03 280);
+  --color-success: oklch(48% 0.11 150);
+  --color-success-soft: oklch(94.5% 0.03 150);
+  --color-warning: oklch(50% 0.11 65);
+  --color-warning-soft: oklch(95% 0.04 80);
+  --color-danger: oklch(50% 0.18 22);
+  --color-danger-hover: oklch(44% 0.18 22);
+  --color-danger-soft: oklch(95% 0.025 22);
+  --color-on-danger: oklch(98.5% 0.004 60);
+  --color-knob: oklch(99.3% 0.003 75);
+  --color-swatch-ink: oklch(99.3% 0.003 75);
+  --color-overlay: oklch(20% 0.01 40 / 0.42);
+  --shadow-sm: 0 1px 2px oklch(30% 0.02 50 / 0.07);
+  --shadow-lg: 0 16px 32px -12px oklch(25% 0.02 50 / 0.28), 0 2px 6px oklch(25% 0.02 50 / 0.08);
+  --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-focus);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --color-bg: oklch(18% 0.008 55);
+    --color-bg-subtle: oklch(16% 0.008 55);
+    --color-bg-muted: oklch(26% 0.01 55);
+    --color-surface: oklch(21.5% 0.009 55);
+    --color-border: oklch(29% 0.01 55);
+    --color-border-strong: oklch(36% 0.011 55);
+    --color-field-edge: oklch(53% 0.012 55);
+    --color-text: oklch(93% 0.006 70);
+    --color-text-muted: oklch(74% 0.012 60);
+    --color-text-faint: oklch(66% 0.012 60);
+    --color-accent: oklch(75% 0.12 42);
+    --color-accent-hover: oklch(81% 0.1 45);
+    --color-accent-soft: oklch(29% 0.045 38);
+    --color-on-accent: oklch(19% 0.012 40);
+    --color-focus: oklch(74% 0.13 42);
+    --color-primary: oklch(91% 0.007 70);
+    --color-primary-hover: oklch(97% 0.005 70);
+    --color-on-primary: oklch(19% 0.01 40);
+    --color-info: oklch(82% 0.08 280);
+    --color-info-soft: oklch(30% 0.05 280);
+    --color-success: oklch(77% 0.13 150);
+    --color-success-soft: oklch(27% 0.04 150);
+    --color-warning: oklch(81% 0.12 80);
+    --color-warning-soft: oklch(28% 0.045 75);
+    --color-danger: oklch(72% 0.15 22);
+    --color-danger-hover: oklch(78% 0.12 22);
+    --color-danger-soft: oklch(28% 0.05 22);
+    --color-on-danger: oklch(18% 0.01 22);
+    --color-knob: oklch(93% 0.006 70);
+    --color-swatch-ink: oklch(99.3% 0.003 75);
+    --color-overlay: oklch(5% 0.005 40 / 0.62);
+    --shadow-sm: 0 1px 2px oklch(5% 0.005 40 / 0.4);
+    --shadow-lg: 0 16px 36px -12px oklch(5% 0.005 40 / 0.7), 0 2px 6px oklch(5% 0.005 40 / 0.4);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: oklch(18% 0.008 55);
+  --color-bg-subtle: oklch(16% 0.008 55);
+  --color-bg-muted: oklch(26% 0.01 55);
+  --color-surface: oklch(21.5% 0.009 55);
+  --color-border: oklch(29% 0.01 55);
+  --color-border-strong: oklch(36% 0.011 55);
+  --color-field-edge: oklch(53% 0.012 55);
+  --color-text: oklch(93% 0.006 70);
+  --color-text-muted: oklch(74% 0.012 60);
+  --color-text-faint: oklch(66% 0.012 60);
+  --color-accent: oklch(75% 0.12 42);
+  --color-accent-hover: oklch(81% 0.1 45);
+  --color-accent-soft: oklch(29% 0.045 38);
+  --color-on-accent: oklch(19% 0.012 40);
+  --color-focus: oklch(74% 0.13 42);
+  --color-primary: oklch(91% 0.007 70);
+  --color-primary-hover: oklch(97% 0.005 70);
+  --color-on-primary: oklch(19% 0.01 40);
+  --color-info: oklch(82% 0.08 280);
+  --color-info-soft: oklch(30% 0.05 280);
+  --color-success: oklch(77% 0.13 150);
+  --color-success-soft: oklch(27% 0.04 150);
+  --color-warning: oklch(81% 0.12 80);
+  --color-warning-soft: oklch(28% 0.045 75);
+  --color-danger: oklch(72% 0.15 22);
+  --color-danger-hover: oklch(78% 0.12 22);
+  --color-danger-soft: oklch(28% 0.05 22);
+  --color-on-danger: oklch(18% 0.01 22);
+  --color-knob: oklch(93% 0.006 70);
+  --color-swatch-ink: oklch(99.3% 0.003 75);
+  --color-overlay: oklch(5% 0.005 40 / 0.62);
+  --shadow-sm: 0 1px 2px oklch(5% 0.005 40 / 0.4);
+  --shadow-lg: 0 16px 36px -12px oklch(5% 0.005 40 / 0.7), 0 2px 6px oklch(5% 0.005 40 / 0.4);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --gutter: var(--space-4);
+  }
+}

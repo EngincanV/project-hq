@@ -1,0 +1,177 @@
+import { defineMessages } from '../../i18n';
+
+export const settingsMessages = defineMessages({
+  tr: {
+    title: 'Ayarlar',
+    modeLabel: 'Çalışma modu',
+    modeLocal: 'Yerel',
+    modeGitHub: 'GitHub',
+
+    // GitHub connection
+    connectionTitle: 'GitHub bağlantısı',
+    connectionIntro:
+      'İçeriğin bir GitHub deposunda durur. Düzenlemeler önce bu tarayıcıda taslak olarak saklanır, “Yayınla” tek bir commit oluşturur.',
+    setupNeeded: 'Başlamak için içerik deponu bağla.',
+    repoLabel: 'Depo',
+    repoHint: 'owner/repo ya da GitHub adresini yapıştır',
+    repoParsed: (repo: string) => `Kullanılacak depo: ${repo}`,
+    repoInvalid: 'owner/repo biçiminde ya da bir GitHub adresi olarak gir.',
+    branchLabel: 'Dal',
+    branchInvalid: 'Geçerli bir dal adı gir (ör. main).',
+    contentDirLabel: 'İçerik klasörü',
+    contentDirHint: 'Depo içindeki klasör; deponun kökü için . yaz.',
+    contentDirInvalid: 'Klasör yolu “..” içeremez.',
+    tokenLabel: 'Erişim token’ı',
+    tokenHint: 'github_pat_ ile başlayan ince ayarlı (fine-grained) token.',
+    tokenRequired: 'Kaydetmek için token gerekli.',
+    tokenPrivacy: 'Token yalnızca bu tarayıcıda saklanır; GitHub dışında hiçbir yere gönderilmez.',
+    sharedOriginWarning:
+      'Bu adres bir GitHub Pages proje sitesi (kullanıcı.github.io/depo): hesabındaki diğer tüm Pages siteleri aynı tarayıcı depolamasını paylaşır ve buraya kaydedilen token’ı ve notları okuyabilir. Uygulamayı yalnızca ona ait bir adresten aç (ör. kendi alan adın ya da sadece bu uygulama için kullanılan kullanıcı.github.io deposu).',
+    showToken: 'Token’ı göster',
+    hideToken: 'Token’ı gizle',
+    tokenHowTo: 'Token nasıl oluşturulur?',
+    tokenSteps: [
+      'GitHub’da yeni bir fine-grained token sayfasını aç.',
+      'Bir ad ve son kullanma tarihi seç.',
+      '“Repository access” altında “Only select repositories” seçip yalnızca içerik deponu ekle.',
+      '“Permissions → Repository permissions” altında “Contents” iznini “Read and write” yap. Başka izin gerekmez.',
+      'Token’ı oluştur, kopyala ve buraya yapıştır.',
+    ],
+    tokenLink: 'Token oluşturma sayfasını aç',
+    newTab: '(yeni sekmede açılır)',
+    test: 'Bağlantıyı test et',
+    save: 'Kaydet',
+    disconnect: 'Bağlantıyı kes',
+    saved: 'GitHub bağlantısı kaydedildi.',
+    disconnected: 'Bağlantı kesildi; token, önbellek ve taslaklar bu tarayıcıdan silindi.',
+    disconnectTitle: 'Bağlantı kesilsin mi?',
+    disconnectText: 'Token, önbelleğe alınmış dosyalar ve taslaklar bu tarayıcıdan silinir. GitHub’daki depoya dokunulmaz.',
+    disconnectDrafts: (n: number) =>
+      `Dikkat: yayınlanmamış ${n} değişikliğin var. Bağlantıyı kesersen bunlar kaybolur.`,
+    disconnectFailed: (error: string) => `Bağlantı kesilemedi: ${error}`,
+
+    // test results
+    testResults: 'Test sonucu',
+    testFailed: (error: string) => `Bağlanılamadı: ${error}`,
+    repoReachable: (name: string, isPrivate: boolean) => `${name} erişilebilir (${isPrivate ? 'özel' : 'herkese açık'}).`,
+    canPush: 'Bu hesap depoya yazabiliyor.',
+    cannotPush: 'Bu hesabın depoya yazma yetkisi yok; yayınlama çalışmaz.',
+    pushUnknown: 'Yazma izni buradan doğrulanamadı; ilk yayınlamada denetlenir.',
+    branchExists: (branch: string) => `“${branch}” dalı var.`,
+    branchMissing: (branch: string, fallback: string) =>
+      `“${branch}” dalı bulunamadı. Varsayılan dal: “${fallback}”.`,
+    repoEmpty: 'Depo boş. İlk yayınlama dalı ve içerik klasörünü oluşturur.',
+    contentFiles: (n: number, dir: string) => `${dir} içinde ${n} dosya bulundu.`,
+    contentMissing: (dir: string) => `${dir} klasörü henüz yok; ilk yayınlama oluşturur.`,
+    repoRoot: 'depo kökü',
+
+    // local mode
+    localTitle: 'Yerel depo',
+    localIntro: 'Uygulama bu bilgisayardaki yerel sunucu üzerinden dosyalara doğrudan yazıyor.',
+    localLabel: 'Kullanılan depo',
+    localRemote: 'GitHub adresi',
+    localNoRemote: 'Uzak depo tanımlı değil.',
+    localPublish: 'Yayınlama',
+    localCanPublish: 'Kullanılabilir (git commit; uzak depo varsa push).',
+    localCannotPublish: (reason: string) => `Kullanılamıyor: ${reason}`,
+    localDemoIntro:
+      'Şu an uygulamayla gelen demo içeriğe bakıyorsun. Düzenlemeler geçici bir kopyaya yazılır ve sunucu kapanınca silinir.',
+    localDemoLabel: 'Demo içerik (geçici kopya)',
+    localOtherRepo:
+      'Kendi içerik klasörünü oluşturmak ya da başka birine geçmek için terminalde npm run setup çalıştırıp sunucuyu yeniden başlat. (Kurulum, proje kökündeki .env.local dosyasına HQ_ROOT=… satırını yazar.)',
+    loading: 'Yükleniyor…',
+
+    // appearance
+    appearanceTitle: 'Görünüm',
+    themeLabel: 'Tema',
+    themes: { system: 'Sistem', light: 'Açık', dark: 'Koyu' },
+    languageLabel: 'Dil',
+    languages: { tr: 'Türkçe', en: 'English' },
+  },
+  en: {
+    title: 'Settings',
+    modeLabel: 'Mode',
+    modeLocal: 'Local',
+    modeGitHub: 'GitHub',
+
+    connectionTitle: 'GitHub connection',
+    connectionIntro:
+      'Your content lives in a GitHub repository. Edits are kept as drafts in this browser first; “Publish” makes one commit.',
+    setupNeeded: 'Connect your content repository to get started.',
+    repoLabel: 'Repository',
+    repoHint: 'owner/repo or paste the GitHub URL',
+    repoParsed: (repo: string) => `Repository to use: ${repo}`,
+    repoInvalid: 'Enter it as owner/repo or as a GitHub URL.',
+    branchLabel: 'Branch',
+    branchInvalid: 'Enter a valid branch name (e.g. main).',
+    contentDirLabel: 'Content folder',
+    contentDirHint: 'Folder inside the repository; use . for the repository root.',
+    contentDirInvalid: 'The folder path cannot contain “..”.',
+    tokenLabel: 'Access token',
+    tokenHint: 'A fine-grained token starting with github_pat_.',
+    tokenRequired: 'A token is needed to save.',
+    tokenPrivacy: 'The token is stored in this browser only and is never sent anywhere except GitHub.',
+    sharedOriginWarning:
+      'This address is a GitHub Pages project site (user.github.io/repo): every other Pages site of the account shares its browser storage and could read the token and notes saved here. Open the app from an address of its own (e.g. your own domain, or a user.github.io repository used only for this app).',
+    showToken: 'Show token',
+    hideToken: 'Hide token',
+    tokenHowTo: 'How to create a token',
+    tokenSteps: [
+      'Open the new fine-grained token page on GitHub.',
+      'Pick a name and an expiration date.',
+      'Under “Repository access” choose “Only select repositories” and add only your content repository.',
+      'Under “Permissions → Repository permissions” set “Contents” to “Read and write”. Nothing else is needed.',
+      'Generate the token, copy it and paste it here.',
+    ],
+    tokenLink: 'Open the token page',
+    newTab: '(opens in a new tab)',
+    test: 'Test connection',
+    save: 'Save',
+    disconnect: 'Disconnect',
+    saved: 'GitHub connection saved.',
+    disconnected: 'Disconnected; the token, cache and drafts were removed from this browser.',
+    disconnectTitle: 'Disconnect?',
+    disconnectText:
+      'The token, cached files and drafts are removed from this browser. The repository on GitHub is not touched.',
+    disconnectDrafts: (n: number) =>
+      `Careful: you have ${n} unpublished ${n === 1 ? 'change' : 'changes'}. Disconnecting discards ${n === 1 ? 'it' : 'them'}.`,
+    disconnectFailed: (error: string) => `Could not disconnect: ${error}`,
+
+    testResults: 'Test result',
+    testFailed: (error: string) => `Could not connect: ${error}`,
+    repoReachable: (name: string, isPrivate: boolean) => `${name} is reachable (${isPrivate ? 'private' : 'public'}).`,
+    canPush: 'This account can push to the repository.',
+    cannotPush: 'This account cannot push to the repository; publishing will fail.',
+    pushUnknown: 'Push permission could not be confirmed here; it is checked on the first publish.',
+    branchExists: (branch: string) => `Branch “${branch}” exists.`,
+    branchMissing: (branch: string, fallback: string) =>
+      `Branch “${branch}” was not found. The default branch is “${fallback}”.`,
+    repoEmpty: 'The repository is empty. The first publish creates the branch and the content folder.',
+    contentFiles: (n: number, dir: string) => `Found ${n} ${n === 1 ? 'file' : 'files'} in ${dir}.`,
+    contentMissing: (dir: string) => `The ${dir} folder does not exist yet; the first publish creates it.`,
+    repoRoot: 'the repository root',
+
+    localTitle: 'Local repository',
+    localIntro: 'The app writes files directly through the local server on this computer.',
+    localLabel: 'Repository in use',
+    localRemote: 'GitHub URL',
+    localNoRemote: 'No remote repository configured.',
+    localPublish: 'Publishing',
+    localCanPublish: 'Available (git commit, plus push when a remote exists).',
+    localCannotPublish: (reason: string) => `Unavailable: ${reason}`,
+    localDemoIntro:
+      'You are looking at the demo content that ships with the app. Edits go to a temporary copy that is deleted when the server stops.',
+    localDemoLabel: 'Demo content (temporary copy)',
+    localOtherRepo:
+      'To create your own content folder or switch to another one, run npm run setup in a terminal and restart the server. (Setup writes a HQ_ROOT=… line to .env.local in the project root.)',
+    loading: 'Loading…',
+
+    appearanceTitle: 'Appearance',
+    themeLabel: 'Theme',
+    themes: { system: 'System', light: 'Light', dark: 'Dark' },
+    languageLabel: 'Language',
+    languages: { tr: 'Türkçe', en: 'English' },
+  },
+});
+
+export type SettingsMessages = (typeof settingsMessages)['tr'];

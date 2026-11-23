@@ -1,0 +1,19 @@
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}
+
+.addon {
+  flex-shrink: 0;
+}
+
+/* Keep the addon level with the input when a hint/error line sits under it. */
+.belowText {
+  padding-bottom: calc(var(--text-xs) * 1.5 + var(--space-1));
+}

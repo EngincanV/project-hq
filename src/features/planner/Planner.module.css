@@ -1,0 +1,742 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The page root carries data-page-width="wide", so the shell gives the planner its wide column. */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-2xl);
+}
+
+.range {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-warning-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.withSide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.panel {
+  min-width: 0;
+}
+
+/* --- week --- */
+
+.week {
+  display: grid;
+  /* Columns never get narrower than a readable width; when seven do not fit, the strip scrolls sideways
+     inside itself (one day per snap) and the page does not. */
+  grid-template-columns: repeat(7, minmax(136px, 1fr));
+  gap: var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-1);
+  padding-bottom: var(--space-2);
+  /* Containing block for the absolutely positioned .visually-hidden labels (and for offsetLeft). */
+  position: relative;
+}
+
+.week > .day {
+  scroll-snap-align: start;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 260px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+/* Today: a coral rule along the top edge and the date in coral; nothing louder. */
+.today {
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+.selected:not(.today) {
+  border-color: var(--color-field-edge);
+}
+
+.dropTarget {
+  background: var(--color-accent-soft);
+  border-style: dashed;
+  border-color: var(--color-accent);
+}
+
+.dayHeading {
+  font-size: var(--text-sm);
+}
+
+.dayButton {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dayButton:hover {
+  background: var(--color-bg-muted);
+}
+
+.weekday {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+  text-transform: capitalize;
+}
+
+.dayNumber {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.today .dayNumber {
+  color: var(--color-accent);
+}
+
+.todayBadge {
+  margin-left: auto;
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.dropZone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: var(--space-6);
+}
+
+.more {
+  align-self: flex-start;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.more:hover {
+  background: var(--color-bg-muted);
+}
+
+/* --- item list --- */
+
+.groups,
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groups {
+  gap: var(--space-2);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.groupLabel {
+  display: flex;
+  min-width: 0;
+  padding: 2px var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.general {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.projectLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.projectName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+.row:hover {
+  background: var(--color-bg-muted);
+}
+
+.lead {
+  font-weight: var(--weight-medium);
+}
+
+.dragging {
+  opacity: 0.45;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.itemTitle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: var(--space-1) var(--space-1) var(--space-1) 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-weight: inherit;
+  text-align: left;
+  overflow-wrap: break-word;
+  cursor: pointer;
+}
+
+.itemText {
+  min-width: 0;
+}
+
+/* In the week strip long titles stop after three lines; the full title is in the tooltip and the editor. */
+.week .itemText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+}
+
+.done .itemText,
+.done .projectName {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* In the narrow week columns the row actions appear over the end of the row on hover / focus. */
+.week .rowActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--color-border);
+  opacity: 0;
+}
+
+.week .row:hover .rowActions,
+.week .row:focus-within .rowActions {
+  opacity: 1;
+}
+
+.dropIndicator {
+  height: 3px;
+  margin: -1px 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.quickAdd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.day .quickAdd input,
+.day .quickAdd select {
+  min-height: 30px;
+  padding: var(--space-1) var(--space-2);
+  border-color: var(--color-border-strong);
+  background: var(--color-bg);
+}
+
+.day .quickAdd input:hover,
+.day .quickAdd select:hover {
+  border-color: var(--color-field-edge);
+}
+
+/* --- month --- */
+
+.month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.monthHead,
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.monthHead {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.monthGrid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monthCell {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.monthCell.today {
+  box-shadow: inset 0 2px 0 var(--color-accent);
+}
+
+.monthCell.selected:not(.today) {
+  border-color: var(--color-field-edge);
+}
+
+.monthCell.outside {
+  background: transparent;
+}
+
+.monthCell.outside .monthDayNumber {
+  color: var(--color-text-faint);
+  font-weight: var(--weight-regular);
+}
+
+.monthButton {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  min-height: 112px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.monthButton:hover {
+  background: var(--color-bg-muted);
+}
+
+.monthDayNumber {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.monthCell.today .monthDayNumber {
+  color: var(--color-accent);
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  font-size: var(--text-xs);
+}
+
+.chipDone .chipName {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.chipName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipCount,
+.chipMore {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- backlog --- */
+
+.side {
+  position: sticky;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  top: calc(var(--topbar-height) + var(--space-4));
+  max-height: calc(100dvh - var(--topbar-height) - var(--space-7));
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  overflow-y: auto;
+}
+
+.sideTitle {
+  font-size: var(--text-md);
+}
+
+.backlogSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.backlogSection > button {
+  margin-left: calc(-1 * var(--space-3));
+}
+
+.backlogSection > div {
+  align-self: stretch;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.backlog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Collapsible backlog above the calendar: projects side by side. */
+.backlogSection .backlog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3) var(--space-5);
+  align-items: start;
+}
+
+.backlogSection .backlogHelp,
+.backlogSection .addsTo {
+  grid-column: 1 / -1;
+}
+
+.backlogHelp,
+.addsTo {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.addsTo {
+  font-weight: var(--weight-medium);
+}
+
+.backlogProject {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.backlogHeader,
+.backlogCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+}
+
+.backlogHeader {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.backlogHeader:hover,
+.backlogCard:hover {
+  background: var(--color-bg-muted);
+}
+
+.backlogCards {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backlogCard {
+  padding-left: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.backlogTitle {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) 0;
+  overflow-wrap: break-word;
+}
+
+.planned .backlogTitle {
+  color: var(--color-text-faint);
+}
+
+.plannedHint {
+  font-size: var(--text-xs);
+}
+
+/* --- dialogs --- */
+
+.detail,
+.form,
+.moveDialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.footerStart {
+  margin-right: auto;
+  color: var(--color-danger);
+}
+
+.moveName {
+  font-weight: var(--weight-medium);
+  overflow-wrap: break-word;
+}
+
+.moveDialog .muted {
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.moveRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.moveTargets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.moveTargets button {
+  flex-direction: column;
+  gap: 0;
+  height: auto;
+  min-height: 52px;
+  padding-block: var(--space-2);
+}
+
+.moveDate {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: normal;
+}
+
+.movePick {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.movePick > :first-child {
+  flex: 1;
+}
+
+/* --- touch --- */
+
+@media (pointer: coarse) {
+  .check {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+
+  .check input {
+    width: 20px;
+    height: 20px;
+  }
+
+  .itemTitle,
+  .dayButton,
+  .more,
+  .backlogTitle {
+    min-height: var(--touch-target);
+  }
+
+  .week .rowActions {
+    position: static;
+    background: transparent;
+    opacity: 1;
+  }
+
+  .day .quickAdd input,
+  .day .quickAdd select {
+    min-height: var(--touch-target);
+  }
+}
+
+/* --- phones: the week is a vertical agenda --- */
+
+@media (max-width: 799px) {
+  /* One column on phones, two on small tablets. */
+  .week {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    align-items: start;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+  }
+
+  .day {
+    min-height: 0;
+  }
+
+  .week .rowActions {
+    position: static;
+    background: transparent;
+    opacity: 1;
+  }
+
+  .monthButton {
+    min-height: 56px;
+  }
+
+  .chipName {
+    display: none;
+  }
+
+  .chip {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .moveTargets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .moveTargets button {
+    flex-direction: row;
+    justify-content: space-between;
+    min-height: var(--touch-target);
+  }
+}

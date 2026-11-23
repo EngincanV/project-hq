@@ -1,0 +1,27 @@
+.card {
+  display: block;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: inherit;
+}
+
+.flush {
+  padding: 0;
+}
+
+.interactive {
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.interactive:hover {
+  border-color: var(--color-border-strong);
+  text-decoration: none;
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: var(--space-4);
+  }
+}

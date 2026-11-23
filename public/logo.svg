@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Project HQ mark: a roadmap card, three lanes of work on the accent colour. -->
+  <rect width="512" height="512" rx="112" fill="#4f46e5"/>
+  <rect x="120" y="136" width="272" height="56" rx="28" fill="#ffffff"/>
+  <rect x="120" y="228" width="200" height="56" rx="28" fill="#ffffff" fill-opacity="0.8"/>
+  <rect x="120" y="320" width="128" height="56" rx="28" fill="#ffffff" fill-opacity="0.6"/>
+  <circle cx="356" cy="348" r="36" fill="#c7d2fe"/>
+</svg>

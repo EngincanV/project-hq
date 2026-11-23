@@ -1,0 +1,77 @@
+.list {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Phones: a soft fade at the end says the row scrolls. */
+@media (max-width: 600px) {
+  .list {
+    padding-right: var(--space-5);
+    mask-image: linear-gradient(to right, var(--color-text) calc(100% - var(--space-6)), transparent);
+  }
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.tab:first-child {
+  padding-left: var(--space-1);
+}
+
+/* The current tab: ink text over a 2px coral rule that sits on the list's hairline. */
+.tab::after {
+  content: '';
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+}
+
+.tab:first-child::after {
+  left: var(--space-1);
+}
+
+.tab:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.tab:focus-visible {
+  outline-offset: -4px;
+}
+
+.active {
+  color: var(--color-text);
+}
+
+.active::after {
+  background: var(--color-accent);
+}

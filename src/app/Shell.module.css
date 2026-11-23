@@ -1,0 +1,85 @@
+/* Hallmark · checked: 2026-11-23 · app screen · theme: Coral (tokens and full stamp in src/styles/tokens.css) · redesign: full · v2.0.0 */
+.shell {
+  --sidebar-current: var(--sidebar-width);
+  display: grid;
+  grid-template-columns: calc(var(--sidebar-current) + var(--safe-left)) minmax(0, 1fr);
+  min-height: 100dvh;
+  transition: grid-template-columns var(--duration-short) var(--ease-in-out);
+}
+
+/* Collapsed on desktop: the sidebar becomes an icon rail and the page takes the freed width. */
+:global(:root[data-sidebar='collapsed']) .shell {
+  --sidebar-current: var(--rail-width);
+}
+
+.sidebarSlot {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/*
+ * Pages sit in a capped, centred column. Pages that are boards or calendars mark their root with
+ * data-page-width="wide" and get a much wider one, so large screens are used instead of a thin column.
+ */
+.content {
+  width: 100%;
+  max-width: calc(var(--content-max) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-6) calc(var(--gutter) + var(--safe-right)) calc(var(--space-8) + var(--safe-bottom))
+    var(--gutter);
+}
+
+.content:has([data-page-width='wide']) {
+  max-width: calc(var(--content-wide) + 2 * var(--gutter));
+}
+
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    transition: none;
+  }
+
+  .sidebarSlot {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: var(--z-drawer);
+    width: auto;
+    transform: translateX(-100%);
+    transition:
+      transform var(--duration-short) var(--ease),
+      visibility 0s linear var(--duration-short);
+    visibility: hidden;
+  }
+
+  .drawerOpen .sidebarSlot {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--shadow-lg);
+    transition: transform var(--duration-short) var(--ease);
+  }
+
+  .drawerOpen .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-drawer) - 1);
+    background: var(--color-overlay);
+  }
+
+  .content {
+    padding: var(--space-5) calc(var(--gutter) + var(--safe-right)) calc(var(--space-7) + var(--safe-bottom))
+      calc(var(--gutter) + var(--safe-left));
+  }
+}

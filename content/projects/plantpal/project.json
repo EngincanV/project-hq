@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "name": "Plantpal",
+  "tagline": "Watering reminders that learn from your home",
+  "type": "mobile-app",
+  "status": "idea",
+  "emoji": "🌱",
+  "color": "#84cc16",
+  "order": 3,
+  "modules": { "stores": true, "ads": false },
+  "stores": {
+    "android": { "enabled": false },
+    "ios": { "enabled": false }
+  }
+}

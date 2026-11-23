@@ -1,0 +1,116 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.card:has(.mainLink:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.name {
+  min-width: 0;
+  font-size: var(--text-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mainLink {
+  color: var(--color-text);
+}
+
+.mainLink:hover {
+  text-decoration: none;
+}
+
+.mainLink:focus-visible {
+  outline: none;
+}
+
+/* The whole card is clickable through the name link. */
+.mainLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+.tagline {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+
+.shortcuts {
+  position: relative; /* above the stretched link */
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 calc(var(--space-2) * -1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.shortcuts a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.shortcuts a:hover {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+@media (pointer: coarse) {
+  .shortcuts a {
+    min-height: var(--touch-target);
+    padding: 0 var(--space-3);
+  }
+}

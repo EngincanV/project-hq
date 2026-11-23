@@ -1,0 +1,16 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.emoji {
+  text-align: center;
+}

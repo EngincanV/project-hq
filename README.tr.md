@@ -1,0 +1,237 @@
+# Project HQ
+
+[English](README.md)
+
+Project HQ, tüm yan projelerini (uygulamalar, oyunlar, SaaS) tek yerden yönetmek için küçük ve sakin bir uygulama:
+notlar, yol haritası panosu, takvim, mağaza ve reklam takibi, her konsola hızlı bağlantılar.
+Yazdığın her şey kendi git deponda düz Markdown ve JSON olarak durur; **Yayınla** düğmesi düzenlemelerini bir commit'e çevirir.
+
+![Üç demo proje ve bugünün planıyla panel](docs/screenshots/dashboard.png)
+
+> **Durum: erken `0.1` sürümü.** Pürüzler olabilir. Bkz. [Bilinen eksikler](#sınırlar-ve-bilinen-eksikler).
+
+## Hızlı başlangıç
+
+[Node.js](https://nodejs.org) 22.22+ ya da 24.15+ (bkz. `.nvmrc`) ve git gerekir.
+
+```sh
+git clone https://github.com/<you>/project-hq.git
+cd project-hq
+npm install
+npm start            # demo içerikle http://127.0.0.1:4173 adresinde açılır
+```
+
+Etrafa bak: demo projeler her ekranda gösterecek bir şey olsun diye var. İstediğin gibi düzenleyebilirsin;
+demo düzenlemeleri geçici bir kopyaya yazılır ve sunucuyu durdurunca silinir, yayınlama kapalıdır.
+
+Kendi içeriğine geçmek için:
+
+```sh
+npm run setup        # ../project-hq-content (bir git deposu) oluşturur ve uygulamayı ona yönlendirir
+npm start            # yeniden başlat: artık kendi (boş) çalışma alanını görürsün
+```
+
+`npm start -- --open` tarayıcıyı da açar. `npm start` gerektiğinde uygulamayı önce derler; ayrı bir build adımı yoktur.
+
+## Neleri takip edebilirsin
+
+- **Projeler.** Her proje bir klasör: ad, emoji, renk, tür (mobil oyun, mobil uygulama, web uygulaması, SaaS, diğer) ve durum (fikir, geliştiriliyor, yayında, beklemede, arşiv). Panel bunları yol haritası ilerlemesi ve mağaza durumuyla kartlar halinde gösterir.
+- **Notlar.** Proje başına istediğin kadar Markdown notu, gerçek bir editörle:
+  Yaz / Böl / Önizleme görünümleri, biçimlendirme araç çubuğu ve kısayolları, önizlemede işaretlenebilen görev listeleri,
+  tablolar, kod blokları, bağlantılar ve yapıştırıp sürükleyip ya da seçip ekleyebildiğin görseller (notların yanında `assets/` klasörüne kaydedilir, göreli yolla bağlanır). Otomatik kayıt; kaydet düğmesi yok.
+- **Yol haritası.** Proje başına bir pano. Sütunlar ve kartlar `roadmap.md` içindeki `##` başlıkları ve `- [ ]` maddeleridir; ekle, düzenle, taşı, işaretle ya da ham Markdown'a geç.
+- **Takvim.** Tüm projeler için haftalık ve aylık takvim. Bir günü planla, maddeleri bir projeyle etiketle, açık yol haritası kartlarını bekleme listesinden bir güne sürükle. Bugünün planı panelde de görünür.
+- **Mağazalar.** Proje başına Google Play ve App Store: paket / bundle kimliği, durum, sürüm, mağaza ve konsol bağlantıları; ayrıca mağaza metni ve sürüm kontrol listesi için bir Markdown not sayfası.
+- **Reklamlar.** AdMob kimlikleri ve reklam birimleri ile deneyler için bir not sayfası.
+- **Bağlantılar.** Konsollar ve paneller için hızlı açma kartları (Play Console, App Store Connect, AdMob, Firebase, Stripe, Vercel…), istediğin gibi gruplanır. Yeni sekmede açılırlar; hiçbir şey sayfaya gömülmez.
+
+| Not editörü (bölünmüş görünüm) | Yol haritası |
+| --- | --- |
+| ![Bölünmüş görünümde not editörü](docs/screenshots/notes-editor.png) | ![Yol haritası panosu](docs/screenshots/roadmap.png) |
+| **Takvim** | **Mağazalar** |
+| ![Bekleme listesiyle haftalık takvim](docs/screenshots/planner.png) | ![Mağazalar sekmesi](docs/screenshots/stores.png) |
+
+Arayüz Türkçe ve İngilizcedir (üst çubuktaki düğme), açık ve koyu tema vardır ve telefonda da çalışır:
+
+<img src="docs/screenshots/phone.png" alt="Telefonda panel" width="260">
+
+## Yayınlama nasıl çalışır
+
+Project HQ iki moddan birinde çalışır; modu kendisi seçer.
+
+| | Yerel (`npm start` / `npm run dev`) | PWA (statik barındırma, ör. GitHub Pages) |
+| --- | --- | --- |
+| Nerede çalışır | kendi bilgisayarında, yalnızca `127.0.0.1` | herhangi bir tarayıcıda, telefona kurulu olarak da |
+| Düzenlemeler | anında içerik klasöründeki dosyalara | tarayıcıda taslak olarak (IndexedDB) |
+| Yayınla | içerik klasörünü `git commit` eder, depoda uzak depo (remote) varsa `git push` eder | token'ınla GitHub API üzerinden tek bir commit |
+| Gerekenler | Node ve git | içerik deponu için bir GitHub token'ı |
+
+Yayınla paneli yayınlanmamış her değişikliği listeler, bir commit mesajı önerir ve değişiklikleri tek tek geri almana izin verir.
+Yerel modda uzak depo yoksa Yayınla yerel bir commit oluşturur ve bunu söyler. PWA modunda bir dosya sen son yüklediğinden beri
+GitHub'da değiştiyse çakışan dosyalar gösterilir ve kendi sürümünü koruyup korumayacağını seçebilirsin.
+
+### Uygulama deposu ve içerik deposu
+
+Uygulama ve notların **iki ayrı depoda** durur:
+
+- bu depo (uygulama) değişmeden kalır, böylece `git pull` her zaman temiz günceller;
+- içeriğin kendi, genellikle özel (private) deposunda durur (varsayılan: `../project-hq-content`).
+
+`npm run setup` içerik klasörünü oluşturur, içinde `git init -b main` çalıştırır ve `.env.local` dosyasına (git'e girmez)
+`HQ_ROOT=../project-hq-content` yazar. Tüm seçenekler için `npm run setup -- --help`: ör. `--dir <yol>`, `--with-examples` (demo projeleri kopyalar),
+`--remote <url>`, `--here` (özel bir fork'u tek depo olarak kullanıyorsan içeriği bu depoda tutar) ve `--yes` (soru sormaz).
+Hiçbir şeyi silmez, GitHub'da depo oluşturmaz ve push etmez.
+
+İçeriğini GitHub'a yedeklemek için github.com'da **boş, özel bir depo** oluştur, sonra
+
+```sh
+cd ../project-hq-content
+git remote add origin https://github.com/<you>/<your-content-repo>.git
+```
+
+ve uygulamada Yayınla'ya bas; ilk yayınlama `git push -u origin main` ile gönderir.
+Yayınlama normal git kurulumunu (kimlik bilgileri, SSH anahtarları) kullanır. git'te henüz `user.name` / `user.email` yoksa önce bunları ayarla.
+
+## Telefonda kullanmak (PWA)
+
+Aynı derleme statik barındırmada kurulabilir bir web uygulaması olarak çalışır. Doğrudan GitHub ile konuşur; sunucu yoktur.
+
+1. Bu depoyu **fork'la**. Fork'unda: *Settings → Pages → Source: GitHub Actions*, ve *Actions* sekmesinde iş akışlarına izin ver
+   (GitHub yeni fork'larda bunları kapatır). Sonra *Actions → Deploy to GitHub Pages → Run workflow* çalıştır (`main`'e her push'ta da çalışır).
+   Site `https://<you>.github.io/project-hq/` adresinde açılır. Oraya token kaydetmeden önce aşağıdaki
+   [Nerede barındırmalı](#nerede-barındırmalı) bölümünü oku: bir proje sitesi adresi, tarayıcı depolamasını diğer Pages sitelerinle paylaşır.
+   İsteğe bağlı: Ayarlar formunu önceden doldurmak için `HQ_CONTENT_REPO` (`owner/repo`) ve `HQ_CONTENT_BRANCH` depo değişkenlerini tanımla.
+2. [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) adresinde **ince ayarlı (fine-grained) bir token oluştur**:
+   - Repository access: *Only select repositories* → yalnızca **içerik** deponu;
+   - Permissions → Repository permissions → **Contents: Read and write**. Başka hiçbir şey gerekmez.
+   - İçinin rahat edeceği bir son kullanma tarihi seç.
+3. Siteyi aç, **Ayarlar**'a içerik deposunu ve token'ı gir, *Bağlantıyı test et*'e, sonra *Kaydet*'e bas.
+4. **Kur:** Android'de (Chrome) *Uygulamayı yükle* / *Ana ekrana ekle*; iPhone'da (Safari) *Paylaş → Ana Ekrana Ekle*.
+
+Düzenlemelerin yayınlayana kadar o tarayıcıda taslak olarak kalır. Başka yerde yapılan değişiklikleri almak için Yayınla panelindeki *Yenile*'yi kullan.
+
+### Nerede barındırmalı
+
+Tarayıcılar `localStorage` ve IndexedDB'yi (token'ın ve notlarının çevrimdışı kopyasının durduğu yer) *kaynak* (origin) başına tutar:
+şema artı alan adı, yol hariç. Bir hesabın tüm GitHub Pages proje siteleri, `https://<you>.github.io/<herhangi-bir-depo>/`, aynı kaynağa
+sahiptir: `https://<you>.github.io`. Yani orada yayınladığın (şimdi ya da ileride) başka herhangi bir proje sitesi, Project HQ'nun
+sakladığı token'ı ve notları okuyabilir. Uygulama böyle bir adresten çalıştığında Ayarlar'da bir uyarı gösterir.
+
+Bunun yerine uygulamaya kendine ait bir kaynak ver; şunlardan biri olur:
+
+- bu Pages sitesi için **özel bir (alt) alan adı** (*Settings → Pages → Custom domain*, ör. `hq.example.com`);
+- yalnızca bu uygulama için kullanılan bir **`<you>.github.io` kök deposu** (`https://<you>.github.io/` adresinde sunulur; o zaman
+  oraya başka kullanıcı sitesi içeriği koyma);
+- **her siteye kendi alt alan adını veren bir statik barındırma** (ör. `<proje>.<host>.app` biçimli adresler).
+
+## İçerik biçimi
+
+Her şey elle düzenlenebilir ve GitHub'da rahat okunur. Tüm yollar `content/` içindedir:
+
+```
+content/
+  projects/<slug>/
+    project.json        ad, tür, durum, emoji, renk, mağaza kimlikleri, bağlantılar…
+    roadmap.md          yol haritası panosu
+    notes/<not>.md      notlar; başlık ilk "# " satırıdır
+    stores/android.md   Play Store notları
+    stores/ios.md       App Store notları
+    ads/admob.md        AdMob notları
+    assets/<görsel>     notlarda kullanılan görseller (göreli bağlantılar)
+  plan/<YYYY-MM>.md     takvim, ay başına bir dosya
+```
+
+Uygulamanın anladığı üç Markdown biçimi var. Bu dosyalardaki diğer her şey olduğu gibi korunur.
+
+**Notlar**: herhangi bir Markdown. İlk `# ` başlığı notun başlığıdır.
+
+**Yol haritası** (`roadmap.md`): her `## ` başlığı bir sütun, her üst düzey görev maddesi bir karttır; girintili satırlar kartın ayrıntılarıdır.
+
+```md
+# Roadmap
+
+## Now
+- [ ] Daily challenge mode
+  One hand-made level per day.
+- [x] Haptics on stone landing
+
+## Next
+- [ ] Rewarded ad for an extra undo
+```
+
+**Takvim** (`plan/2026-11.md`): her `## YYYY-AA-GG` başlığı bir gündür; sondaki `#<proje-slug>` maddeyi bir projeye bağlar.
+
+```md
+# 2026-11
+
+## 2026-11-23
+- [ ] Stripe checkout for the Pro plan #ledgerbird
+- [x] Reply to store reviews #pebble-quest
+- [ ] Send November invoices
+```
+
+[`content/`](content/) klasöründeki demo içerik her biçimi gösterir.
+
+## Klavye kısayolları
+
+`Mod`, macOS'ta ⌘, diğerlerinde Ctrl'dir.
+
+| Nerede | Tuşlar | Ne yapar |
+| --- | --- | --- |
+| Her yerde | `Mod+Shift+U` | Yayınla panelini açar |
+| Yayınla paneli | `Mod+Enter` | yayınlar |
+| Editör | `Mod+B` / `Mod+I` / `Mod+Shift+X` | kalın / italik / üstü çizili |
+| Editör | `Mod+E` / `Mod+K` | satır içi kod / bağlantı |
+| Editör | `Mod+Shift+7` / `8` / `9` | numaralı / madde işaretli / görev listesi |
+| Editör | `Mod+Alt+1` / `2` / `3` / `0` | başlık 1–3 / düz metin |
+| Editör | `Mod+Z` / `Mod+Shift+Z` | geri al / yinele |
+| Yol haritası, takvim | `Enter` / `Esc` | yazılan kartı ya da maddeyi ekler / vazgeçer |
+
+## Güvenlik notları
+
+- Yerel sunucu yalnızca `127.0.0.1` üzerinde dinler ve yalnızca `localhost` benzeri `Host` başlıklarını kabul eder (API'de ve `npm start`'ın
+  statik dosyalarında). Okumalar dahil her API isteği, sunucunun kendi adresi dışında bir `Origin` ya da `Sec-Fetch-Site: cross-site` /
+  `same-site` taşıyorsa reddedilir; böylece başka siteler ve başka yerel portlar (`*.localhost`, başka bir geliştirme sunucusu) içeriğini okuyamaz.
+  API hiçbir zaman CORS başlığı göndermez; geliştirme ve önizleme sunucuları Vite'ın CORS desteği kapalı çalışır. Yazma işlemleri ayrıca özel bir başlık ister.
+- İçerik klasörü dışındaki yollar reddedilir (`..` yok, nokta ile başlayan dosya yok, sembolik bağlar çözülür). Git, kabuk üzerinden değil
+  argüman dizileriyle ve birebir (literal) yol eşleşmesiyle çalıştırılır (`*.md` adlı bir dosya yalnızca o dosyadır).
+- Geliştirme ve önizleme sunucuları içerik klasörünü hiçbir zaman statik dosya olarak sunmaz (`/content/…`, `/@fs/…` ve kodlanmış biçimleri
+  404 döner); içerik yalnızca API üzerinden okunur ve API sandbox'lı bir Content-Security-Policy gönderir.
+- PWA modunda GitHub token'ın o sitenin tarayıcı `localStorage`'ında saklanır. O kaynakta JavaScript çalıştırabilen herkes
+  (ör. kötü niyetli bir tarayıcı eklentisi, aynı kaynaktaki başka bir site ya da kilidi açık cihazını kullanan biri) onu okuyabilir.
+  Uygulamayı kendine ait bir kaynaktan sun (bkz. [Nerede barındırmalı](#nerede-barındırmalı)). Yalnızca içerik deposuyla ve yalnızca
+  *Contents* izniyle sınırlı, son kullanma tarihi olan bir fine-grained token kullan; bir tarayıcıdan token'ı, önbelleği ve taslakları silmek için *Ayarlar → Bağlantıyı kes*'i kullan.
+- Hiçbir şey sayfaya gömülmez ve GitHub dışında hiçbir yere gönderilmez: analitik yok, üçüncü taraf betik yok, iframe yok. Üretim derlemesi, ağ isteklerine yalnızca uygulamanın kendisine ve `api.github.com`'a izin veren bir Content-Security-Policy kullanır.
+- Not önizlemeleri gösterilmeden önce temizlenir (DOMPurify). Uygulamanın kendi kaynağına işaret eden bağlantılar (göreli yollar, `/…`)
+  düz metin olarak gösterilir; böylece içerik deposundaki bir dosya hiçbir zaman uygulamanın bir sayfası olarak açılmaz. `#…` bağlantıları
+  ve başka sitelere giden bağlantılar çalışır. SVG görseller gösterilmeden önce temizlenir (betik, olay işleyicisi, `foreignObject` ve dış başvuru yok).
+- `project.json` içindeki renkler yalnızca hex değerse (`#rgb`, `#rrggbb`, alfa ile ya da alfasız) kullanılır; diğer değerler yok sayılır
+  ama dosyada korunur.
+
+## Geliştirme
+
+```sh
+npm run dev          # yerel API ile Vite geliştirme sunucusu (anında yenileme)
+npm test             # birim ve entegrasyon testleri (Vitest)
+npm run typecheck    # TypeScript
+npm run build        # tip denetimi ve dist/ içine üretim derlemesi
+npm run sandbox -- 5190   # demo içeriğin atılabilir bir git kopyasında geliştirme sunucusu (yayınlama çalışır)
+```
+
+`npm run dev` de `npm start` ile aynı kuralı izler: `npm run setup` çalıştırılana (ya da `HQ_ROOT` ayarlanana) kadar demo içerik gösterir.
+Kod React + TypeScript, düz CSS modülleri ve bağımlılıksız bir Node sunucusundan oluşur. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ile başla;
+katkılar memnuniyetle karşılanır, bkz. [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Sınırlar ve bilinen eksikler
+
+- Bu bir `0.1` sürümü.
+- GitHub API üzerinden yayınlama (PWA modu) şimdiye kadar yalnızca test paketindeki simüle edilmiş bir GitHub'a karşı denendi, github.com'a karşı değil.
+- GitHub Pages dağıtım iş akışı henüz hiç çalışmadı.
+- Tek kişi, tek içerik deposu: hesaplar, paylaşım ya da gerçek zamanlı ortak çalışma yok. Çakışmalar dosya bazında algılanır, birleştirilmez.
+- Yerel mod bilgisayarda Node ve git ister; PWA modu bir GitHub hesabı ve token ister.
+- Demo takvimdeki günler bugünün tarihine göre kayar, ama demo içeriğin geri kalanı sabittir.
+- Arayüz dilleri: Türkçe ve İngilizce.
+
+## Lisans
+
+[MIT](LICENSE) © Engincan Veske
