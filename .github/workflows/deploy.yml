@@ -42,25 +42,47 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: read # configure-pages reads the site settings
+      pages: read # the Pages check and configure-pages read the site settings
+    outputs:
+      pages: ${{ steps.pages.outputs.enabled }}
     steps:
+      # Until Pages is turned on (Settings → Pages → Source: GitHub Actions) this workflow does nothing,
+      # instead of failing on every push.
+      - id: pages
+        name: Check that GitHub Pages is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages is not enabled for this repository. Skipping the deploy."
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pages.outputs.enabled == 'true'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.pages.outputs.enabled == 'true'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+        if: steps.pages.outputs.enabled == 'true'
       - run: npm run build
+        if: steps.pages.outputs.enabled == 'true'
         env:
           VITE_HQ_REPO: ${{ vars.HQ_CONTENT_REPO || '' }}
           VITE_HQ_BRANCH: ${{ vars.HQ_CONTENT_BRANCH || 'main' }}
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        if: steps.pages.outputs.enabled == 'true'
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.pages.outputs.enabled == 'true'
         with:
           path: dist
 
   deploy:
     needs: build
+    if: needs.build.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

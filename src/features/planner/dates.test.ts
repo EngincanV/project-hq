@@ -132,12 +132,18 @@ describe('todayKey', () => {
 describe('firstDayOfWeek', () => {
   const proto = Intl.Locale.prototype as unknown as { getWeekInfo?: () => unknown };
   const original = proto.getWeekInfo;
+  // Older engines expose the same data as a `weekInfo` getter, which the helper falls back to,
+  // so both forms have to be faked for the result not to depend on the runtime.
+  const originalAccessor = Object.getOwnPropertyDescriptor(proto, 'weekInfo');
   afterEach(() => {
     proto.getWeekInfo = original;
+    if (originalAccessor) Object.defineProperty(proto, 'weekInfo', originalAccessor);
+    else delete (proto as { weekInfo?: unknown }).weekInfo;
   });
 
   function fakeWeekInfo(info: unknown) {
     proto.getWeekInfo = () => info;
+    Object.defineProperty(proto, 'weekInfo', { configurable: true, get: () => info });
   }
 
   it('reads Intl week info (1 = Monday … 7 = Sunday)', () => {
