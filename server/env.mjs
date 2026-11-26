@@ -1,5 +1,5 @@
-// Resolves the local server configuration: environment variables first, then a git-ignored
-// `.env.local` at the project root (simple KEY=VALUE lines, `#` comments), then defaults.
+// Web-mode settings: environment variables first, then a git-ignored `.env.local` at the project root (simple
+// KEY=VALUE lines, `#` comments), then defaults. server/config.mjs builds on this and adds the desktop JSON file.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,4 +62,40 @@ export function loadServerConfig({ env = process.env, projectDir = PROJECT_DIR }
   const watchParsed = watchRaw === undefined ? NaN : Number(watchRaw);
   const watchIntervalMs = Number.isFinite(watchParsed) && watchParsed >= 0 ? Math.round(watchParsed) : DEFAULT_WATCH_INTERVAL_MS;
   return { root, contentDir, port, demo: configuredRoot === undefined, watchIntervalMs };
+}
+
+/**
+ * The `HQ_ROOT` value to store: `.` for the app folder itself, `../name` for a sibling folder,
+ * otherwise the absolute path.
+ */
+export function hqRootValue(root, projectDir) {
+  const r = path.resolve(root);
+  const p = path.resolve(projectDir);
+  if (r === p) return '.';
+  if (path.dirname(r) === path.dirname(p)) return `../${path.basename(r)}`;
+  return r;
+}
+
+/**
+ * Set `key=value` in the text of a `.env.local` file without touching other lines: replaces the first
+ * active `key=` line (comments are left alone) or appends one.
+ * @param {string} text
+ * @param {string} key
+ * @param {string} value
+ */
+export function mergeEnvLine(text, key, value) {
+  const quoted = /[\s#"']/.test(value) ? JSON.stringify(value) : value;
+  const line = `${key}=${quoted}`;
+  const lines = text.split(/\r?\n/);
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const at = lines.findIndex((l) => {
+    const t = l.trim();
+    return !t.startsWith('#') && t.slice(0, t.indexOf('=')).trim() === key && t.includes('=');
+  });
+  if (at !== -1) {
+    lines[at] = line;
+    return lines.join(eol);
+  }
+  if (text === '') return line + eol;
+  return text + (text.endsWith('\n') ? '' : eol) + line + eol;
 }

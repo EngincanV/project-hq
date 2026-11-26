@@ -1,9 +1,9 @@
 // Vite plugin that mounts the local API on the dev server and on `vite preview`, and keeps Vite from serving the
 // content folder as static files (see content-guard.mjs).
 import path from 'node:path';
-import { createApiHandler } from './api.mjs';
+import { createAppHandler } from './app.mjs';
+import { createConfigStore } from './config.mjs';
 import { contentDirVariants, contentGuardMiddleware, isInside } from './content-guard.mjs';
-import { prepareDemoRoot } from './demo.mjs';
 import { loadServerConfig, PROJECT_DIR } from './env.mjs';
 
 /** Vite 8's default `server.fs.deny`; setting the option replaces it, so it is repeated here. */
@@ -21,26 +21,35 @@ function configuredContentDirs() {
 
 /** @returns {import('vite').Plugin} */
 export function projectHqApi() {
-  /** @type {ReturnType<typeof createApiHandler> | undefined} */
+  /** @type {ReturnType<typeof createAppHandler> | undefined} */
   let handler;
   /** @type {string[]} */
   const contentDirs = [];
+  const guard = (dir) => {
+    if (isInside(dir, PROJECT_DIR)) {
+      console.warn('\n  Project HQ: the content folder contains the app itself, so the dev server cannot hide it.\n');
+      return;
+    }
+    for (const v of contentDirVariants(dir)) if (!contentDirs.includes(v)) contentDirs.push(v);
+  };
   // Created on first use, so `vite build` never prepares a demo copy.
   const getHandler = () => {
-    if (handler) return handler;
-    const { root, contentDir, demo, watchIntervalMs } = loadServerConfig();
-    const actualRoot = demo ? prepareDemoRoot({ projectDir: PROJECT_DIR, contentDir }) : root;
-    if (demo) console.log('\n  Project HQ: showing the demo content. Run `npm run setup` to use your own.\n');
-    const actualContent = path.resolve(actualRoot, contentDir);
-    if (!isInside(actualContent, PROJECT_DIR)) contentDirs.push(...contentDirVariants(actualContent));
-    else console.warn('\n  Project HQ: the content folder contains the app itself, so the dev server cannot hide it.\n');
-    handler = createApiHandler({ root: actualRoot, contentDir, demo, watchIntervalMs });
+    handler ??= createAppHandler({
+      config: createConfigStore({ mode: 'web', projectDir: PROJECT_DIR }),
+      projectDir: PROJECT_DIR,
+      onChange: ({ root, contentDir, demo }) => {
+        if (demo) console.log('\n  Project HQ: showing the demo content. Choose your own folder in Settings or run `npm run setup`.\n');
+        guard(path.resolve(root, contentDir));
+      },
+    });
     return handler;
   };
   /** @param {{ config: import('vite').ResolvedConfig, middlewares: import('vite').Connect.Server }} server */
   const mount = (server) => {
+    // Middleware mode = embedded by startServer() (desktop:dev), which mounts the API and the guard itself.
+    if (server.config.server.middlewareMode) return;
     const h = getHandler();
-    for (const dir of configuredContentDirs()) contentDirs.push(...contentDirVariants(dir));
+    for (const dir of configuredContentDirs()) guard(dir);
     // Runs before Vite's own static / transform / `/@fs/` middlewares (configure hooks run before they are added).
     server.middlewares.use((_req, res, next) => {
       res.setHeader('X-Frame-Options', 'DENY'); // no framing by other sites (clickjacking)

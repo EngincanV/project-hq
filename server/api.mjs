@@ -57,7 +57,7 @@ export function redactCredentials(text) {
   return String(text).replace(/([a-z][a-z0-9+.-]*:\/\/)[^@\s/]+@/gi, '$1***@');
 }
 
-class HttpError extends Error {
+export class HttpError extends Error {
   /** @param {number} status @param {string} message @param {string} code */
   constructor(status, message, code) {
     super(message);
@@ -78,9 +78,26 @@ export function hostName(hostHeader) {
   return colon === -1 ? h : h.slice(0, colon);
 }
 
-/** True when the request's Host header names a loopback host. */
-export function isAllowedHost(req) {
-  return ALLOWED_HOSTS.has(hostName(req.headers.host));
+/** Port of a Host header (`undefined` when it names none). */
+export function hostPort(hostHeader) {
+  if (!hostHeader) return undefined;
+  const h = String(hostHeader).trim();
+  const rest = h.startsWith('[') ? h.slice(h.indexOf(']') + 1) : h;
+  const colon = rest.lastIndexOf(':');
+  if (colon === -1) return undefined;
+  const port = Number(rest.slice(colon + 1));
+  return Number.isInteger(port) ? port : NaN;
+}
+
+/**
+ * True when the request's Host header names a loopback host. With `port` (the port the server is bound to,
+ * possibly chosen at random), the Host must also name exactly that port.
+ * @param {import('node:http').IncomingMessage} req
+ * @param {number} [port]
+ */
+export function isAllowedHost(req, port) {
+  if (!ALLOWED_HOSTS.has(hostName(req.headers.host))) return false;
+  return port === undefined || hostPort(req.headers.host) === port;
 }
 
 /** True when the `Origin` header (if any) names exactly the host the request was sent to. */
@@ -101,9 +118,10 @@ export function isSameOrigin(req) {
  * null when the request is acceptable. `same-origin`, `none` (typed into the address bar) and a missing
  * header (curl, older browsers) are allowed.
  * @param {import('node:http').IncomingMessage} req
+ * @param {number} [port] the bound port, when known (see isAllowedHost)
  */
-export function crossSiteReason(req) {
-  if (!isAllowedHost(req)) return 'forbidden host';
+export function crossSiteReason(req, port) {
+  if (!isAllowedHost(req, port)) return 'forbidden host';
   if (!isSameOrigin(req)) return 'origin mismatch';
   const site = String(req.headers['sec-fetch-site'] ?? '').toLowerCase();
   if (site === 'cross-site' || site === 'same-site') return 'cross-site request';
@@ -141,7 +159,7 @@ export function cleanRelPath(p, opts = {}) {
   return s;
 }
 
-function send(res, status, body, headers = {}) {
+export function send(res, status, body, headers = {}) {
   const isBuf = Buffer.isBuffer(body);
   const payload = isBuf ? body : body === undefined ? '' : JSON.stringify(body);
   stripCorsHeaders(res);
@@ -179,7 +197,7 @@ function readBody(req, limit) {
   });
 }
 
-async function readJson(req) {
+export async function readJson(req) {
   const buf = await readBody(req, JSON_LIMIT);
   if (buf.length === 0) return {};
   try {
@@ -193,10 +211,12 @@ async function readJson(req) {
 /**
  * `demo`: the root is a throw-away copy of the demo content; editing works, publishing is refused.
  * `watchIntervalMs`: how often the UI should poll `/api/stamp` for changes made outside the app (0 = never).
- * @param {{ root: string, contentDir?: string, demo?: boolean, watchIntervalMs?: number }} options
+ * `port`: the port the server is bound to (or a function returning it, for a port chosen at random); when given,
+ * the `Host` header must name exactly this port.
+ * @param {{ root: string, contentDir?: string, demo?: boolean, watchIntervalMs?: number, port?: number | (() => number | undefined) }} options
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, next?: (err?: unknown) => void) => void}
  */
-export function createApiHandler({ root, contentDir = 'content', demo = false, watchIntervalMs = 0 }) {
+export function createApiHandler({ root, contentDir = 'content', demo = false, watchIntervalMs = 0, port }) {
   const rootAbs = path.resolve(root);
   const contentAbs = path.resolve(rootAbs, contentDir);
   if (contentAbs !== rootAbs && !contentAbs.startsWith(rootAbs + path.sep)) {
@@ -477,7 +497,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     const route = url.pathname;
     const method = (req.method || 'GET').toUpperCase();
 
-    const crossSite = crossSiteReason(req);
+    const crossSite = crossSiteReason(req, typeof port === 'function' ? port() : port);
     if (crossSite) throw new HttpError(403, crossSite, CODES.forbidden);
     if (method !== 'GET' && method !== 'HEAD') {
       if (req.headers['x-hq'] !== '1') throw new HttpError(403, 'missing X-HQ header', CODES.forbidden);
