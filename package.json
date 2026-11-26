@@ -1,7 +1,7 @@
 {
   "name": "project-hq",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A minimal, local-first headquarters for your side projects: notes, roadmap, planner, store and ads tracking, quick links. Content is plain Markdown in your own git repo.",
   "author": "Engincan Veske",
   "homepage": "https://github.com/EngincanV/project-hq#readme",
