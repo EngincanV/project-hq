@@ -92,6 +92,14 @@ git remote add origin https://github.com/<you>/<your-content-repo>.git
 ve uygulamada Yayınla'ya bas; ilk yayınlama `git push -u origin main` ile gönderir.
 Yayınlama normal git kurulumunu (kimlik bilgileri, SSH anahtarları) kullanır. git'te henüz `user.name` / `user.email` yoksa önce bunları ayarla.
 
+Yerel yayınlama hakkında bilinmesi gereken iki şey:
+
+- **Uygulama kimlik bilgilerini hiç görmez.** Yayınla, içerik klasöründe senin kendi `git` komutunu çalıştırır; git de terminaldeki
+  gibi oturum açar: kimlik deposu (macOS Anahtar Zinciri, Git Credential Manager, …) ya da SSH anahtarın üzerinden. Hiçbir şifre ya da
+  token uygulamadan, tarayıcıdan ya da bu depodaki bir dosyadan geçmez. Gönderimin nereye gideceğini içerik deposunun kendi `origin` adresi belirler.
+- **Her commit git adını ve e-postanı taşır**, elle attığın her commit gibi. İçerik deposu herkese açıksa ya da açılırsa bu e-posta
+  geçmişte görünür; gizli kalsın istiyorsan önce o depoda `user.email` olarak bir GitHub `noreply` adresi ayarla.
+
 ## Telefonda kullanmak (PWA)
 
 Aynı derleme statik barındırmada kurulabilir bir web uygulaması olarak çalışır. Doğrudan GitHub ile konuşur; sunucu yoktur.

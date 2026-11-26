@@ -92,6 +92,14 @@ git remote add origin https://github.com/<you>/<your-content-repo>.git
 and press Publish in the app; the first publish pushes with `git push -u origin main`.
 Publishing uses your normal git setup (credentials, SSH keys). If git has no `user.name` / `user.email` yet, set them first.
 
+Two things worth knowing about local publishing:
+
+- **The app never sees your credentials.** Publish runs your own `git` in the content folder, and git signs in the way it does
+  in a terminal: through its credential helper (the macOS Keychain, Git Credential Manager, …) or your SSH key. No password or
+  token passes through the app, the browser, or any file in this repo. Where the push goes is the content repo's own `origin`.
+- **Each commit carries your git name and email**, like any commit you make by hand. If the content repo is or becomes public,
+  that email is visible in its history; set a GitHub `noreply` address as `user.email` in that repo first if you want to keep it private.
+
 ## Using it on your phone (PWA)
 
 The same build runs as an installable web app on static hosting. It talks to GitHub directly; there is no server.
