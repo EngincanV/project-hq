@@ -23,16 +23,18 @@ const NO_CACHE = new Set(['sw.js', 'index.html', 'manifest.webmanifest']);
 
 /**
  * `(req, res) => Promise<void>` serving files from `distDir`, falling back to index.html (the app uses hash routing).
+ * `port`: the bound port (or a function returning it); when given, the `Host` header must name exactly that port.
  * @param {string} distDir
+ * @param {{ port?: number | (() => number | undefined) }} [options]
  */
-export function createStaticHandler(distDir) {
+export function createStaticHandler(distDir, { port } = {}) {
   const DIST = path.resolve(distDir);
   return async function serveStatic(req, res) {
     // Never inside a frame of another site (clickjacking of Publish / Discard / Delete).
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
     // Same Host rule as the API: a page on another site that rebinds its DNS name to 127.0.0.1 gets nothing.
-    if (!isAllowedHost(req)) {
+    if (!isAllowedHost(req, typeof port === 'function' ? port() : port)) {
       res.statusCode = 403;
       return res.end('Forbidden host');
     }

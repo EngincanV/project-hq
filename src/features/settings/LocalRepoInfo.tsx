@@ -1,4 +1,5 @@
 import { ExternalLink } from 'lucide-react';
+import { isDesktop } from '../../desktop';
 import { useLang, useMessages } from '../../i18n';
 import { serverText, useStorageInfo } from '../../storage';
 import { CopyButton } from '../project-shared/CopyButton';
@@ -39,12 +40,18 @@ export function LocalRepoInfo() {
             )}
           </dd>
           <dt>{t.localPublish}</dt>
-          <dd>{info.canPublish ? t.localCanPublish : t.localCannotPublish(serverText(info.reasonCode, info.reason, lang) ?? '—')}</dd>
+          <dd>
+            {info.canPublish
+              ? t.localCanPublish
+              : t.localCannotPublish(
+                  // The server's demo text points at `npm run setup`; the desktop app has the folder form instead.
+                  info.demo && isDesktop() ? t.localDemoDesktopReason : (serverText(info.reasonCode, info.reason, lang) ?? '—'),
+                )}
+          </dd>
         </dl>
       ) : (
         <p className={styles.note}>{t.loading}</p>
       )}
-      <p className={styles.note}>{t.localOtherRepo}</p>
     </>
   );
 }

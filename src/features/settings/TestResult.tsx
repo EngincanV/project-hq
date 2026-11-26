@@ -1,19 +1,7 @@
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useMessages } from '../../i18n';
 import type { ConnectionResult } from '../../storage/github/connection';
-import { cx } from '../../ui';
 import { settingsMessages } from './messages';
-import styles from './SettingsPage.module.css';
-
-type Tone = 'ok' | 'warn' | 'fail' | 'info';
-
-const ICONS: Record<Tone, ReactNode> = {
-  ok: <CheckCircle2 size={16} aria-hidden="true" />,
-  warn: <AlertTriangle size={16} aria-hidden="true" />,
-  fail: <XCircle size={16} aria-hidden="true" />,
-  info: <Info size={16} aria-hidden="true" />,
-};
+import { ResultList, type ResultTone } from './ResultList';
 
 interface TestResultProps {
   result: ConnectionResult;
@@ -24,7 +12,7 @@ interface TestResultProps {
 /** The checklist shown after "Test connection". */
 export function TestResult({ result, branch, contentDir }: TestResultProps) {
   const t = useMessages(settingsMessages);
-  const lines: [Tone, string][] = [];
+  const lines: [ResultTone, string][] = [];
   if (!result.ok) {
     lines.push(['fail', t.testFailed(result.error)]);
   } else {
@@ -40,14 +28,5 @@ export function TestResult({ result, branch, contentDir }: TestResultProps) {
       lines.push(result.fileCount > 0 ? ['ok', t.contentFiles(result.fileCount, dir)] : ['info', t.contentMissing(dir)]);
     }
   }
-  return (
-    <ul className={styles.results} aria-label={t.testResults}>
-      {lines.map(([tone, text]) => (
-        <li key={text} className={cx(styles.result, styles[tone])}>
-          {ICONS[tone]}
-          <span>{text}</span>
-        </li>
-      ))}
-    </ul>
-  );
+  return <ResultList lines={lines} label={t.testResults} />;
 }

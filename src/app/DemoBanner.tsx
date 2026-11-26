@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { FlaskConical, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { isDesktop } from '../desktop';
 import { useMessages } from '../i18n';
 import { useStorageInfo } from '../storage';
 import { IconButton } from '../ui';
@@ -16,7 +18,10 @@ function wasDismissed(): boolean {
   }
 }
 
-/** Slim notice while the local server shows the bundled demo content. Dismissed for the browser session. */
+/**
+ * Slim notice while the local server shows the bundled demo content. Dismissed for the browser session.
+ * The desktop app has no terminal step: it points at Settings → Local repository instead of `npm run setup`.
+ */
 export function DemoBanner() {
   const t = useMessages(appMessages);
   const info = useStorageInfo();
@@ -36,11 +41,18 @@ export function DemoBanner() {
   return (
     <div className={styles.banner} role="note">
       <FlaskConical size={16} aria-hidden="true" className={styles.icon} />
-      <p className={styles.text}>
-        {before}
-        <code>npm run setup</code>
-        {after}
-      </p>
+      {isDesktop() ? (
+        <p className={styles.text}>
+          {t.demoBannerDesktop}
+          <Link to="/settings">{t.demoBannerDesktopLink}</Link>.
+        </p>
+      ) : (
+        <p className={styles.text}>
+          {before}
+          <code>npm run setup</code>
+          {after}
+        </p>
+      )}
       <IconButton size="sm" label={t.demoDismiss} icon={<X size={16} />} onClick={dismiss} />
     </div>
   );

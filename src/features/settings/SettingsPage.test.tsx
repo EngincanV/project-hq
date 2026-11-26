@@ -29,6 +29,12 @@ function mockServices() {
   };
 }
 
+const localServices = {
+  load: async () => ({ mode: 'web' as const, root: '/work/my-content', contentDir: 'content', demo: false, file: '/work/project-hq/.env.local', envOverride: false, pinned: false }),
+  test: async () => { throw new Error('not used'); },
+  save: async () => { throw new Error('not used'); },
+};
+
 function renderPage(services: ConnectionServices, mode: StorageMode = 'github', storage = new MemoryStorage()) {
   return render(
     <StorageProvider storage={storage} mode={mode}>
@@ -36,7 +42,7 @@ function renderPage(services: ConnectionServices, mode: StorageMode = 'github', 
         <MemoryRouter initialEntries={['/settings']}>
           <Routes>
             <Route path="/" element={<p>dashboard</p>} />
-            <Route path="/settings" element={<SettingsPage services={services} />} />
+            <Route path="/settings" element={<SettingsPage services={services} localServices={localServices} />} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>
@@ -192,7 +198,8 @@ describe('SettingsPage (local mode)', () => {
     renderPage(mockServices(), 'local', storage);
     expect(await screen.findByText('my-content · main')).toBeInTheDocument();
     expect(screen.getByText('Unavailable: no remote')).toBeInTheDocument();
-    expect(screen.getByText(/HQ_ROOT/)).toBeInTheDocument();
+    expect(await screen.findByText(/HQ_ROOT/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Repository folder')).toHaveValue('/work/my-content');
     expect(screen.queryByLabelText('Access token')).not.toBeInTheDocument();
   });
 

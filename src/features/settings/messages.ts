@@ -79,9 +79,48 @@ export const settingsMessages = defineMessages({
     localDemoIntro:
       'Şu an uygulamayla gelen demo içeriğe bakıyorsun. Düzenlemeler geçici bir kopyaya yazılır ve sunucu kapanınca silinir.',
     localDemoLabel: 'Demo içerik (geçici kopya)',
+    localDemoDesktopReason: 'demo içerik gösteriliyor. Aşağıdan kendi içerik klasörünü seç.',
     localOtherRepo:
-      'Kendi içerik klasörünü oluşturmak ya da başka birine geçmek için terminalde npm run setup çalıştırıp sunucuyu yeniden başlat. (Kurulum, proje kökündeki .env.local dosyasına HQ_ROOT=… satırını yazar.)',
+      'Yeni bir içerik klasörü oluşturmak için terminalde npm run setup çalıştır (proje kökündeki .env.local dosyasına HQ_ROOT=… satırını yazar), sonra yukarıdan seç.',
     loading: 'Yükleniyor…',
+
+    // local repository form
+    localFormTitle: 'Klasörü değiştir',
+    localRootLabel: 'Depo klasörü',
+    localRootHint: 'İçerik klasörünü barındıran git deposunun tam yolu.',
+    localRootRequired: 'Bir klasör seç ya da yolunu yaz.',
+    chooseFolder: 'Klasör seç',
+    localSaved: 'Yerel depo kaydedildi; uygulama artık bu klasörü kullanıyor.',
+    localSaveFailed: (error: string) => `Kaydedilemedi: ${error}`,
+    localLoadFailed: (error: string) => `Yerel ayarlar okunamadı: ${error}`,
+    localSettingsFile: (file: string) => `Ayarların saklandığı yer: ${file}`,
+    localEnvOverride:
+      'HQ_ROOT ortam değişkeni tanımlı ve bu formdan önce gelir. Buradan klasör seçmek için değişkeni kaldırıp sunucuyu yeniden başlat.',
+    localPinned: 'İçerik klasörü sunucu başlatılırken belirlendi; buradan değiştirilemez.',
+    localErrors: {
+      root_not_found: 'Klasör bulunamadı.',
+      root_not_directory: 'Bu yol bir klasör değil.',
+      invalid_root: 'Geçerli bir klasör yolu gir.',
+      invalid_content_dir: 'İçerik klasörü depo klasörünün içinde olmalı (“..” ya da tam yol olamaz).',
+      env_override: 'HQ_ROOT ortam değişkeni tanımlı; .env.local’a yazılan değer kullanılmaz.',
+    } as Record<string, string>,
+    gitFound: (version: string) => `Git bulundu (${version}).`,
+    gitMissing: (error: string) =>
+      `Git bulunamadı. Git’i kur (git-scm.com) ya da PATH’e ekle, sonra tekrar dene. Ayrıntı: ${error}`,
+    folderMissing: (folder: string) => `Klasör bulunamadı: ${folder}`,
+    notARepo: 'Bu klasör bir git deposu değil. Düzenleme çalışır; yayınlamak için klasörde git init çalıştır.',
+    localBranch: (branch: string) => `Git deposu, “${branch}” dalı.`,
+    localRemoteFound: (url: string) => `Uzak depo: ${url}`,
+    localRemoteOther: (name: string) => `Uzak depo: ${name} (GitHub dışı).`,
+    localRemoteMissing: 'Uzak depo yok; yayınlama yalnızca yerel commit oluşturur.',
+    localContentMissing: (dir: string) => `${dir} klasörü henüz yok; ilk projeyi eklediğinde oluşturulur.`,
+
+    // desktop app
+    desktopTitle: 'Masaüstü uygulaması',
+    desktopVersion: 'Sürüm',
+    openAtLogin: 'Oturum açınca başlat',
+    openAtLoginHint: 'Bu bilgisayarda oturum açtığında Project HQ kendiliğinden açılır.',
+    openAtLoginFailed: 'Ayar değiştirilemedi.',
 
     // appearance
     appearanceTitle: 'Görünüm',
@@ -166,9 +205,46 @@ export const settingsMessages = defineMessages({
     localDemoIntro:
       'You are looking at the demo content that ships with the app. Edits go to a temporary copy that is deleted when the server stops.',
     localDemoLabel: 'Demo content (temporary copy)',
+    localDemoDesktopReason: 'the demo content is shown. Choose your own content folder below.',
     localOtherRepo:
-      'To create your own content folder or switch to another one, run npm run setup in a terminal and restart the server. (Setup writes a HQ_ROOT=… line to .env.local in the project root.)',
+      'To create a new content folder, run npm run setup in a terminal (it writes a HQ_ROOT=… line to .env.local in the project root), then choose it above.',
     loading: 'Loading…',
+
+    localFormTitle: 'Change folder',
+    localRootLabel: 'Repository folder',
+    localRootHint: 'Full path of the git repository that holds your content folder.',
+    localRootRequired: 'Choose a folder or type its path.',
+    chooseFolder: 'Choose folder',
+    localSaved: 'Local repository saved; the app now uses this folder.',
+    localSaveFailed: (error: string) => `Could not save: ${error}`,
+    localLoadFailed: (error: string) => `Could not read the local settings: ${error}`,
+    localSettingsFile: (file: string) => `Settings are stored in ${file}`,
+    localEnvOverride:
+      'The HQ_ROOT environment variable is set and wins over this form. Unset it and restart the server to choose a folder here.',
+    localPinned: 'The content folder was set when the server started and cannot be changed here.',
+    localErrors: {
+      root_not_found: 'Folder not found.',
+      root_not_directory: 'This path is not a folder.',
+      invalid_root: 'Enter a valid folder path.',
+      invalid_content_dir: 'The content folder must be inside the repository folder (no “..” or full paths).',
+      env_override: 'HQ_ROOT is set in the environment, so a value written to .env.local would not be used.',
+    } as Record<string, string>,
+    gitFound: (version: string) => `Git found (${version}).`,
+    gitMissing: (error: string) =>
+      `Git was not found. Install git (git-scm.com) or add it to your PATH, then try again. Details: ${error}`,
+    folderMissing: (folder: string) => `Folder not found: ${folder}`,
+    notARepo: 'This folder is not a git repository. Editing works; to publish, run git init in it.',
+    localBranch: (branch: string) => `Git repository, branch “${branch}”.`,
+    localRemoteFound: (url: string) => `Remote: ${url}`,
+    localRemoteOther: (name: string) => `Remote: ${name} (not on GitHub).`,
+    localRemoteMissing: 'No remote; publishing only makes a local commit.',
+    localContentMissing: (dir: string) => `The ${dir} folder does not exist yet; it is created when you add the first project.`,
+
+    desktopTitle: 'Desktop app',
+    desktopVersion: 'Version',
+    openAtLogin: 'Open at login',
+    openAtLoginHint: 'Project HQ starts by itself when you log in to this computer.',
+    openAtLoginFailed: 'Could not change the setting.',
 
     appearanceTitle: 'Appearance',
     themeLabel: 'Theme',

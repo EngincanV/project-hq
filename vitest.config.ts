@@ -21,7 +21,7 @@ export default defineConfig({
         test: {
           name: 'server',
           environment: 'node',
-          include: ['server/**/*.test.mjs', 'scripts/**/*.test.mjs'],
+          include: ['server/**/*.test.mjs', 'scripts/**/*.test.mjs', 'electron/**/*.test.mjs'],
           testTimeout: 30_000,
         },
       },

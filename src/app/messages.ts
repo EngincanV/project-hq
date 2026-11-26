@@ -39,6 +39,8 @@ export const appMessages = defineMessages({
     loadError: 'Yüklenemedi',
     demoBanner: ['Demo içeriğe bakıyorsun. Kendi içeriğini oluşturmak için ', ' çalıştır.'] as [string, string],
     demoDismiss: 'Demo uyarısını kapat',
+    demoBannerDesktop: 'Demo içeriğe bakıyorsun; düzenlemeler kalıcı değil. Kendi içerik klasörünü seçmek için ',
+    demoBannerDesktopLink: 'Ayarlar’ı aç',
   },
   en: {
     appName: 'Project HQ',
@@ -78,5 +80,7 @@ export const appMessages = defineMessages({
     loadError: 'Could not load',
     demoBanner: ['You are looking at demo content. Run ', ' to create your own.'] as [string, string],
     demoDismiss: 'Dismiss the demo notice',
+    demoBannerDesktop: 'You are looking at demo content; edits are not kept. To use your own content folder, ',
+    demoBannerDesktopLink: 'open Settings',
   },
 });

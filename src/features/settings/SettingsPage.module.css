@@ -28,6 +28,13 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.subTitle {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
 .intro {
   max-width: var(--measure);
   color: var(--color-text-muted);
