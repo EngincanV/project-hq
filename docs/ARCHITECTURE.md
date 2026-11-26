@@ -38,11 +38,22 @@ and regrouped into month files), and serves that copy. The temp folder is delete
 `code: 'demo'`. The shell shows `DemoBanner` (dismissed per browser session via `sessionStorage`).
 The demo copy is prepared lazily by the Vite plugin (so `vite build` never creates one) and eagerly by `npm start`.
 
+### Outside changes (live refresh)
+
+`GET /api/stamp` returns a SHA-1 over every content file's path, size and mtime plus the git `HEAD`. `/api/health`
+reports `watchIntervalMs` (`HQ_WATCH_INTERVAL_MS`, default 3000, 0 = off) and, outside demo mode, `contentPath`.
+`src/storage/useOutsideChanges.ts` (mounted once by `StorageProvider`) calls `LocalStorage.checkOutsideChanges()`
+on that interval while the page is visible and on window focus; when the stamp differs from the previous one, the
+adapter notifies its subscribers, so every `useStorageQuery` re-reads. `MarkdownDoc` takes the new text only when it
+has no unsaved typing. This is how edits made by other editors or by coding agents such as Claude Code show up.
+GitHub mode does not implement `checkOutsideChanges` (refresh is manual).
+
 ### `npm run setup`
 
 `scripts/setup.mjs` (zero dependencies; pure helpers in `scripts/setup-lib.mjs`, unit-tested) asks — or takes flags
-`--dir`, `--here`, `--with-examples` / `--no-examples`, `--remote`, `--yes`, `--help` — where the content repo goes
+`--dir`, `--here`, `--with-examples` / `--no-examples`, `--claude-md` / `--no-claude-md`, `--remote`, `--yes`, `--help` — where the content repo goes
 (default `../project-hq-content`), creates `<dir>/content/`, optionally copies the demo projects (never overwriting),
+copies `templates/content-repo/CLAUDE.md` to `<dir>/CLAUDE.md` unless it exists or `--no-claude-md` is given,
 runs `git init -b main` unless `<dir>` already is the top of a git repo, optionally adds `origin`, merges `HQ_ROOT=` into
 `.env.local` without touching other lines, warns when git has no user email, and prints next steps. It never deletes,
 never creates remote repos and never pushes; re-running is safe.
@@ -199,11 +210,12 @@ export interface Storage {
 
 | Route | Does |
 | --- | --- |
-| `GET /api/health` | `{ app: 'project-hq', mode: 'local', demo?, label, canPublish, remoteUrl, reason, reasonCode }` |
+| `GET /api/health` | `{ app: 'project-hq', mode: 'local', demo?, label, canPublish, remoteUrl, contentPath?, watchIntervalMs, reason, reasonCode }` |
+| `GET /api/stamp` | `{ stamp }`: fingerprint of the content folder (file paths, sizes, mtimes, git HEAD) |
 | `GET /api/files` | `{ files: string[] }` |
 | `GET /api/file?path=` | raw bytes, 404 when missing |
 | `PUT /api/file?path=` | raw body → file (creates folders) |
-| `DELETE /api/file?path=[&dir=1]` | delete file / folder |
+| `DELETE /api/file?path=[&dir=1]` | delete file / folder (a symlink is removed itself, never its target) |
 | `GET /api/changes` | `{ changes: Change[] }` from `git status` limited to the content dir |
 | `POST /api/discard` | `{ paths?: string[] }` → restore from HEAD / remove untracked |
 | `POST /api/publish` | `{ message }` → `git add` + `git commit` (content dir only) + `git push` when a remote exists; `PublishResult` (no remote / nothing to commit = `message`, failed push = `error`) |
@@ -228,7 +240,12 @@ Safety rules (non-negotiable):
   `vite.config.ts` runs the dev and preview servers with `cors: false` (Vite's default lets any localhost origin read).
 - Every non-GET also needs header `X-HQ: 1`.
 - Paths are normalised and must stay inside the content dir (no `..`, no absolute paths, no dot-files, symlinks
-  resolved). `GET /api/file` answers with a `sandbox` CSP and `nosniff`.
+  resolved and not allowed to lead into dot-folders). Writes and deletes resolve only the parent folder, so they replace
+  or remove a symlink itself rather than its target. `GET /api/file` answers with a `sandbox` CSP and `nosniff`.
+- No framing: `npm start` sends `X-Frame-Options: DENY` and `frame-ancestors 'none'`, the dev server sends
+  `X-Frame-Options: DENY`, and `src/main.tsx` refuses to start inside a frame (static hosts cannot send headers).
+- The first push is `git push -u --end-of-options <remote> refs/heads/<branch>`; git output returned to the UI has
+  credentials in URLs masked (`redactCredentials`).
 - Body limit 25 MB. Git only through `execFile` with argument arrays and `GIT_LITERAL_PATHSPECS=1` (no globs or
   `:(magic)` pathspecs; folder paths still match their contents).
 - The dev/preview servers never serve a content folder as static files: `server/content-guard.mjs` (mounted by the Vite

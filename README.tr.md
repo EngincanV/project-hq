@@ -1,6 +1,6 @@
 # Project HQ
 
-[English](README.md)
+[English](README.md) · *En güncel ve ayrıntılı belge İngilizce README'dir (entegrasyonlar, mimari, katkı rehberi).*
 
 Project HQ, tüm yan projelerini (uygulamalar, oyunlar, SaaS) tek yerden yönetmek için küçük ve sakin bir uygulama:
 notlar, yol haritası panosu, takvim, mağaza ve reklam takibi, her konsola hızlı bağlantılar.
@@ -99,6 +99,38 @@ Yerel yayınlama hakkında bilinmesi gereken iki şey:
   token uygulamadan, tarayıcıdan ya da bu depodaki bir dosyadan geçmez. Gönderimin nereye gideceğini içerik deposunun kendi `origin` adresi belirler.
 - **Her commit git adını ve e-postanı taşır**, elle attığın her commit gibi. İçerik deposu herkese açıksa ya da açılırsa bu e-posta
   geçmişte görünür; gizli kalsın istiyorsan önce o depoda `user.email` olarak bir GitHub `noreply` adresi ayarla.
+
+## Yapılandırma
+
+Kodda kullanıcıya özel değer (depo, kullanıcı adı, uygulama kimliği, yol) yoktur. Sunucu ayarları ortam değişkenleri ya da
+git'e girmeyen `.env.local` dosyasıyla verilir; tüm değişkenler [`.env.example`](.env.example) içinde açıklanmıştır.
+
+| Değişken | Varsayılan | Ne işe yarar |
+| --- | --- | --- |
+| `HQ_ROOT` | *(boş → demo modu)* | İçerik git deposunun klasörü. `npm run setup` yazar. |
+| `HQ_CONTENT_DIR` | `content` | `HQ_ROOT` içindeki içerik klasörü. |
+| `PORT` | `4173` | `npm start` portu (yalnızca `127.0.0.1`). |
+| `HQ_WATCH_INTERVAL_MS` | `3000` | Açık uygulamanın içerik klasöründeki dış değişiklikleri ne sıklıkla kontrol edeceği; `0` kapatır. |
+| `VITE_HQ_REPO`, `VITE_HQ_BRANCH` | boş, `main` | PWA derlemesinde Ayarlar formunu önceden doldurur (herkese açık pakete girer; token koyma). |
+
+Uygulama içinde: GitHub bağlantısı (PWA), tema ve dil tarayıcıda; proje bilgileri, mağaza ve AdMob kimlikleri, bağlantılar
+kendi içerik deponda (`project.json`) saklanır. Yerel modda Ayarlar sayfası içerik klasörünün tam yolunu gösterir.
+
+## Claude Code ile kullanmak
+
+İçerik düz dosyalardan oluştuğu için [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) onu doğrudan
+okuyup güncelleyebilir; yerel modda açık uygulama değişiklikleri birkaç saniye içinde kendiliğinden gösterir ve Yayınla
+panelinde listeler.
+
+1. `npm run setup` ile kendi içerik deponu oluştur (Claude Code'a biçimleri anlatan bir `CLAUDE.md` ekler), `npm start` çalıştır.
+2. Uygulamada projenin **Genel bakış** sekmesine kod deposunun bağlantısını ekle; projenin kısa adını (`#/p/<slug>`) not et.
+3. **Ayarlar → Yerel depo**'dan içerik klasörünün yolunu kopyala.
+4. Kod deposunda: `claude --add-dir /içerik/deposu/yolu` ve örneğin "Günlük meydan okuma modunu yaz, sonra Project HQ'daki
+   yol haritası kartını işaretle" de. Kart birkaç saniye içinde işaretli görünür; değişiklikleri Yayınla panelinden gözden
+   geçirip yayınlarsın.
+
+Aynı dosyayı aynı anda hem uygulamada hem Claude Code'da düzenleme: son yazan kazanır. PWA modunda otomatik yenileme yoktur
+(Yayınla panelinde *Yenile*). Ayrıntılar İngilizce README'de.
 
 ## Telefonda kullanmak (PWA)
 
