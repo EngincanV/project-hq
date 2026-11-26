@@ -1,0 +1,64 @@
+# Desktop packaging (electron-builder). `npm run desktop:build` builds the web app and packages it for the current OS.
+#
+# Signing is optional and switched on by environment variables only; without them the builds are unsigned and work
+# out of the box (see README → Desktop app → First launch):
+#   macOS signing:      CSC_LINK (base64 .p12 or path), CSC_KEY_PASSWORD
+#   macOS notarization: APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID,
+#                       or APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER (runs only when the app is signed)
+#   Windows signing:    WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD
+# .github/workflows/desktop-release.yml maps the GitHub secrets of the same purpose onto these variables.
+appId: io.github.engincanv.projecthq
+productName: Project HQ
+copyright: Copyright © 2026 Engincan Veske
+
+directories:
+  output: release
+  buildResources: build
+
+# The app is the built web app (dist/), the local server and the Electron main process. The demo content ships too.
+files:
+  - package.json
+  - dist/**/*
+  - server/**/*
+  - electron/**/*
+  - content/**/*
+  - "!**/*.test.mjs"
+  - "!server/vite-plugin.*"
+  - "!server/index.mjs"
+  - "!server/build.mjs"
+
+asar: true
+
+mac:
+  category: public.app-category.developer-tools
+  icon: build/icon.png
+  hardenedRuntime: true
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    # electron-updater installs macOS updates from the zip (signed builds only).
+    - target: zip
+      arch: [arm64, x64]
+
+dmg:
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: true
+  perMachine: false
+  artifactName: ${productName}-Setup-${version}.${ext}
+  shortcutName: Project HQ
+
+# Update metadata (latest.yml, latest-mac.yml) points at GitHub Releases. CI uploads to a draft release; the
+# maintainer publishes it by hand.
+publish:
+  provider: github
+  owner: EngincanV
+  repo: project-hq
+  releaseType: draft

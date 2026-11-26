@@ -1,6 +1,9 @@
 node_modules
 dist
 dev-dist
+# Desktop app build output (electron-builder)
+release
+dist-electron
 .DS_Store
 *.local
 .env.local
