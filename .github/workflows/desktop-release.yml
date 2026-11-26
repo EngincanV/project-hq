@@ -1,10 +1,16 @@
-# Builds the desktop app (macOS dmg/zip for arm64 + x64, Windows installer) when a `v*` tag is pushed and uploads the
-# files to a DRAFT GitHub release for that tag. Publish the draft by hand (Releases → Edit → Publish) once checked;
-# installed apps only see published releases.
+# Builds the desktop app (macOS dmg/zip for arm64 + x64, Windows installer) and smoke-tests the packaged app on both
+# operating systems.
 #
-# The tag must match "version" in package.json (tag v0.2.0 ↔ "version": "0.2.0").
+# Two ways to run it:
+#   - Push a `v*` tag: the tag must match "version" in package.json (tag v0.2.0 <-> "version": "0.2.0"). The files are
+#     uploaded to a DRAFT GitHub release for that tag. Publish the draft by hand (Releases -> Edit -> Publish) once
+#     checked; installed apps only see published releases.
+#   - Run it by hand (Actions -> Desktop release -> Run workflow): packages the selected branch without the tag check
+#     and without a release. The files are only uploaded as workflow artifacts, so you can test packaging safely.
 #
-# Signing is optional. Without these repository secrets the builds are unsigned (see README → Desktop app):
+# See docs/releasing.md for the full release steps.
+#
+# Signing is optional. Without these repository secrets the builds are unsigned (see docs/desktop.md):
 #   MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD                     Developer ID Application certificate (.p12, base64) + password
 #   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   notarization (used only when the app is signed)
 #   WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD                     Windows code-signing certificate (.pfx, base64) + password
@@ -16,6 +22,7 @@ name: Desktop release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,16 +50,24 @@ jobs:
           cache: npm
 
       - name: Check that the tag matches package.json
+        if: github.event_name == 'push'
         shell: bash
         run: |
           version="$(node -p "require('./package.json').version")"
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            tag_version="${GITHUB_REF_NAME#v}"
+            echo "::error title=Tag does not match package.json::Tag $GITHUB_REF_NAME does not match package.json version $version. To fix it: (1) on main run 'npm version $tag_version --no-git-tag-version', commit package.json and package-lock.json and push; (2) delete the tag with 'git tag -d $GITHUB_REF_NAME && git push origin :refs/tags/$GITHUB_REF_NAME'; (3) tag the new commit and push it again with 'git tag $GITHUB_REF_NAME && git push origin $GITHUB_REF_NAME'. See docs/releasing.md."
             exit 1
           fi
+          echo "Tag $GITHUB_REF_NAME matches package.json version $version"
 
       - run: npm ci
+
+      # The unit tests are platform independent and already run on every push and pull request (ci.yml, Linux).
+      # They run once more here, on macOS; on Windows the packaged app is checked by the smoke test below.
       - run: npm test
+        if: runner.os == 'macOS'
+
       - run: npm run build
 
       # Only secrets that are set become environment variables: electron-builder treats a present-but-empty
@@ -69,7 +84,8 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
           put() {
-            local delim="EOF_$(openssl rand -hex 8)"
+            local delim
+            delim="EOF_$(node -e "process.stdout.write(require('node:crypto').randomBytes(8).toString('hex'))")"
             { echo "$1<<$delim"; echo "$2"; echo "$delim"; } >> "$GITHUB_ENV"
           }
           if [ "$RUNNER_OS" = "macOS" ]; then
@@ -97,9 +113,42 @@ jobs:
       - name: Package
         run: npx electron-builder --publish never
 
+      # electron-builder writes the arm64 app to release/mac-arm64 and the x64 app to release/mac. Run the one that
+      # matches the runner's CPU.
       - name: Smoke test the packaged app (macOS)
         if: runner.os == 'macOS'
-        run: '"release/mac-arm64/Project HQ.app/Contents/MacOS/Project HQ" --smoke-test'
+        shell: bash
+        run: |
+          if [ "$(uname -m)" = "arm64" ]; then dir="release/mac-arm64"; else dir="release/mac"; fi
+          bin="$dir/Project HQ.app/Contents/MacOS/Project HQ"
+          if [ ! -x "$bin" ]; then
+            echo "::error::Packaged app not found at $bin"
+            ls -la release
+            exit 1
+          fi
+          "$bin" --smoke-test
+
+      # The Windows build is a GUI app: start it with Start-Process so the step waits for it and gets its exit code,
+      # and collect its output from files.
+      - name: Smoke test the packaged app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'release\win-unpacked\Project HQ.exe'
+          if (-not (Test-Path $exe)) {
+            Write-Output "::error::Packaged app not found at $exe"
+            Get-ChildItem release
+            exit 1
+          }
+          $out = Join-Path $env:RUNNER_TEMP 'smoke-out.txt'
+          $err = Join-Path $env:RUNNER_TEMP 'smoke-err.txt'
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke-test' -Wait -PassThru -NoNewWindow `
+            -RedirectStandardOutput $out -RedirectStandardError $err
+          Get-Content $out, $err -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) {
+            Write-Output "::error::Smoke test failed with exit code $($p.ExitCode)"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -115,6 +164,7 @@ jobs:
 
   release:
     needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
