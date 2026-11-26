@@ -41,7 +41,7 @@ CI runs the same three commands. There is no separate linter; TypeScript runs in
 - Add or update tests next to the code you change (`*.test.ts(x)` in `src/`, `*.test.mjs` in `server/`, `scripts/` and `electron/`).
 - New server configuration goes through `server/config.mjs` (web mode reads `server/env.mjs`: environment, then
   `.env.local`; desktop mode reads `settings.json` in the app's data folder), build configuration into
-  `import.meta.env.VITE_*`, always with a default, documented in `.env.example` and the README's *Configuration* table.
+  `import.meta.env.VITE_*`, always with a default, documented in `.env.example` and [docs/configuration.md](docs/configuration.md).
 
 ## Conventions
 

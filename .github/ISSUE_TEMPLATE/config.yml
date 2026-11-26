@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/EngincanV/project-hq/security/advisories/new
+    about: Please report security problems privately through GitHub private vulnerability reporting, not in a public issue.
+  - name: Documentation
+    url: https://github.com/EngincanV/project-hq#documentation
+    about: Setup, configuration, publishing and the desktop app are documented in the README and docs/.
