@@ -1,4 +1,4 @@
-# Project HQ — Architecture
+# Project HQ architecture
 
 One place to manage all side projects (apps, games, SaaS): per-project notes, roadmap, a planner,
 store listings (Play Store / App Store), ads (AdMob) and quick-launch panels. Content is plain Markdown +
@@ -19,7 +19,7 @@ The app decides at start-up: `GET ./api/health` answers with `{"app":"project-hq
 ## App repo and content repo
 
 The app is open source; a user's notes are not. They live in two repositories, so the app repo stays clean
-and `git pull` always updates it. Nothing personal is hard-coded in `src/`, `server/` or `scripts/` —
+and `git pull` always updates it. Nothing personal is hard-coded in `src/`, `server/` or `scripts/`;
 projects exist only as files in the content folder.
 
 - `content/` in the app repo is **demo content** (three fictional projects and a plan) used by demo mode,
@@ -53,8 +53,8 @@ GitHub mode does not implement `checkOutsideChanges` (refresh is manual).
 
 ### `npm run setup`
 
-`scripts/setup.mjs` (zero dependencies; pure helpers in `scripts/setup-lib.mjs`, unit-tested) asks — or takes flags
-`--dir`, `--here`, `--with-examples` / `--no-examples`, `--claude-md` / `--no-claude-md`, `--remote`, `--yes`, `--help` — where the content repo goes
+`scripts/setup.mjs` (zero dependencies; pure helpers in `scripts/setup-lib.mjs`, unit-tested) asks (or takes flags
+`--dir`, `--here`, `--with-examples` / `--no-examples`, `--claude-md` / `--no-claude-md`, `--remote`, `--yes`, `--help`) where the content repo goes
 (default `../project-hq-content`), creates `<dir>/content/`, optionally copies the demo projects (never overwriting),
 copies `templates/content-repo/CLAUDE.md` to `<dir>/CLAUDE.md` unless it exists or `--no-claude-md` is given,
 runs `git init -b main` unless `<dir>` already is the top of a git repo, optionally adds `origin`, merges `HQ_ROOT=` into
@@ -252,13 +252,13 @@ output (`commit_failed`, `push_failed`, …) are deliberately not translated, so
 
 Safety rules (non-negotiable):
 
-- Bind `127.0.0.1` only (`startServer` refuses other hosts). Reject requests whose `Host` is not `localhost`/`127.0.0.1`/`[::1]`
-  — on the API and on the static files (`server/static.mjs`, which also answers 400 to malformed percent-encoding).
+- Bind `127.0.0.1` only (`startServer` refuses other hosts). Reject requests whose `Host` is not `localhost`/`127.0.0.1`/`[::1]`,
+  on the API and on the static files (`server/static.mjs`, which also answers 400 to malformed percent-encoding).
   Under `startServer` the `Host` must also name the **bound port** (`isAllowedHost(req, port)`), which matters when the
   port is chosen at random: a page served by another local server cannot pass the check by guessing the name.
 - Every API request, **GET included**, is refused (403 `forbidden`) when an `Origin` header is present and does not
   match the request's host, or when `Sec-Fetch-Site` is `cross-site` or `same-site` (`same-origin`, `none` and no header
-  are allowed) — `crossSiteReason()` in `server/api.mjs`. Other loopback origins (`*.localhost`, other ports) are other sites.
+  are allowed); see `crossSiteReason()` in `server/api.mjs`. Other loopback origins (`*.localhost`, other ports) are other sites.
 - No CORS, ever: the API removes any `Access-Control-*` header set by an earlier middleware before it answers, and
   `vite.config.ts` runs the dev and preview servers with `cors: false` (Vite's default lets any localhost origin read).
 - Every non-GET also needs header `X-HQ: 1`.
@@ -275,12 +275,12 @@ Safety rules (non-negotiable):
   `:(magic)` pathspecs; folder paths still match their contents).
 - The dev/preview servers never serve a content folder as static files: `server/content-guard.mjs` (mounted by the Vite
   plugin before Vite's own middlewares) answers 404 for any URL that resolves into the configured content dir or the
-  app's own `content/` — decoded repeatedly, normalised, case-insensitive on macOS/Windows, ignoring `?raw`/`?url`/`?import`,
+  app's own `content/`: decoded repeatedly, normalised, case-insensitive on macOS/Windows, ignoring `?raw`/`?url`/`?import`,
   following `/@fs/` and `/@id/`. The same folders are added to `server.fs.deny` as a second line.
 
 In the app: rendered Markdown never links into the app's own origin (relative paths, `/…`, this host or another
-loopback name on the same port, `blob:` lose their `href`; `#…` routes and other sites work —
-`linkTarget()` in `src/components/markdown/render.ts`); SVG assets are cleaned with DOMPurify's SVG profile before
+loopback name on the same port, `blob:` lose their `href`; `#…` routes and other sites work;
+see `linkTarget()` in `src/components/markdown/render.ts`); SVG assets are cleaned with DOMPurify's SVG profile before
 they become `blob:` URLs (`src/components/markdown/svg.ts`); `parseProjectMeta` keeps `color` only when it is a hex
 colour (the stored value is never rewritten unless the user picks another); Settings warns when the PWA runs as a
 GitHub Pages project site (`*.github.io/<repo>/`), whose origin is shared with every other Pages site of the account.
@@ -299,11 +299,11 @@ src/app/                    shell: App, routes, Sidebar, Topbar, ProjectLayout (
 src/ui/                     shared primitives: Button, IconButton, Input, Textarea, Select, Modal,
                             ConfirmDialog, Tabs, Toast (useToast), EmptyState, Spinner, Badge, Card
 src/styles/                 tokens.css, base.css
-src/i18n/                   useLang(), useMessages(dict) — each feature keeps its own `messages.ts` ({ tr, en })
+src/i18n/                   useLang(), useMessages(dict); each feature keeps its own `messages.ts` ({ tr, en })
 src/storage/                types.ts, index.ts, local.ts, github.ts (+ github settings helpers)
 src/data/                   types.ts, projects.ts (useProjects, useProject, saveProjectMeta, createProject,
                             deleteProject), files.ts (useTextFile, useFileList), slug.ts
-src/components/markdown/    MarkdownDoc (editor + preview + image upload) — `<MarkdownDoc path="…" />`
+src/components/markdown/    MarkdownDoc (editor + preview + image upload): `<MarkdownDoc path="…" />`
 src/features/dashboard/     DashboardPage
 src/features/overview/      OverviewTab (project details + edit form)
 src/features/notes/         NotesTab
