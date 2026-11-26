@@ -79,6 +79,7 @@ export const settingsMessages = defineMessages({
     localDemoIntro:
       'Şu an uygulamayla gelen demo içeriğe bakıyorsun. Düzenlemeler geçici bir kopyaya yazılır ve sunucu kapanınca silinir.',
     localDemoLabel: 'Demo içerik (geçici kopya)',
+    localDemoDesktopReason: 'demo içerik gösteriliyor. Aşağıdan kendi içerik klasörünü seç.',
     localOtherRepo:
       'Yeni bir içerik klasörü oluşturmak için terminalde npm run setup çalıştır (proje kökündeki .env.local dosyasına HQ_ROOT=… satırını yazar), sonra yukarıdan seç.',
     loading: 'Yükleniyor…',
@@ -204,6 +205,7 @@ export const settingsMessages = defineMessages({
     localDemoIntro:
       'You are looking at the demo content that ships with the app. Edits go to a temporary copy that is deleted when the server stops.',
     localDemoLabel: 'Demo content (temporary copy)',
+    localDemoDesktopReason: 'the demo content is shown. Choose your own content folder below.',
     localOtherRepo:
       'To create a new content folder, run npm run setup in a terminal (it writes a HQ_ROOT=… line to .env.local in the project root), then choose it above.',
     loading: 'Loading…',
