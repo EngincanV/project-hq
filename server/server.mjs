@@ -72,7 +72,7 @@ export async function startServer(options = {}) {
       root: projectDir,
       configFile: path.join(projectDir, 'vite.config.ts'),
       appType: 'spa',
-      server: { middlewareMode: true, hmr: { server } },
+      server: { middlewareMode: true, ws: { server } },
     });
     vite = dev;
     const guardMw = contentGuardMiddleware({ root: dev.config.root, contentDirs: guardedDirs, base: dev.config.base });
