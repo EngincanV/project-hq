@@ -15,7 +15,7 @@ function request(route, headers = {}) {
     const req = http.request({ host: '127.0.0.1', port, path: route, headers }, (res) => {
       let body = '';
       res.on('data', (c) => (body += c));
-      res.on('end', () => resolve({ status: res.statusCode, body }));
+      res.on('end', () => resolve({ status: res.statusCode, body, headers: res.headers }));
     });
     req.on('error', reject);
     req.end();
@@ -38,7 +38,7 @@ afterAll(async () => {
 
 describe('static handler', () => {
   it('serves files and falls back to index.html', async () => {
-    expect(await request('/a.js')).toEqual({ status: 200, body: 'js' });
+    expect(await request('/a.js')).toMatchObject({ status: 200, body: 'js' });
     expect((await request('/some/route')).body).toContain('app');
   });
 
@@ -52,5 +52,13 @@ describe('static handler', () => {
     expect((await request('/', { Host: 'evil.example' })).status).toBe(403);
     expect((await request('/', { Host: 'rebind.attacker.test:4173' })).status).toBe(403);
     expect((await request('/', { Host: 'localhost:4173' })).status).toBe(200);
+  });
+});
+
+describe('framing', () => {
+  it('forbids other sites from framing the app', async () => {
+    const res = await request('/', { Host: '127.0.0.1' });
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['content-security-policy']).toContain("frame-ancestors 'none'");
   });
 });

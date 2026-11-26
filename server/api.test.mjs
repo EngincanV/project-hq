@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { createApiHandler } from './api.mjs';
+import { createApiHandler, redactCredentials } from './api.mjs';
 import { normalizeGitHubUrl } from './git.mjs';
 
 let root;
@@ -176,6 +176,33 @@ describe('local API', () => {
     fs.rmSync(outside, { recursive: true, force: true });
   });
 
+  it('deletes and discards a symlink itself, never its target or the content folder', async () => {
+    await put('notes.md', 'keep me');
+    fs.symlinkSync('notes.md', path.join(root, 'content', 'link.md'));
+    fs.symlinkSync('.', path.join(root, 'content', 'self'));
+    expect((await api(`${fileRoute('self')}&dir=1`, { method: 'DELETE' })).status).toBe(200);
+    expect(fs.existsSync(path.join(root, 'content', 'notes.md'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'content', 'self'))).toBe(false);
+    await post('/api/discard', { paths: ['link.md'] });
+    expect(fs.readFileSync(path.join(root, 'content', 'notes.md'), 'utf8')).toBe('keep me');
+    expect(fs.existsSync(path.join(root, 'content', 'link.md'))).toBe(false);
+  });
+
+  it('replaces a symlink on write instead of writing through it', async () => {
+    await put('target.md', 'original');
+    fs.symlinkSync('target.md', path.join(root, 'content', 'alias.md'));
+    expect((await put('alias.md', 'new')).status).toBe(200);
+    expect(fs.readFileSync(path.join(root, 'content', 'target.md'), 'utf8')).toBe('original');
+    expect(fs.lstatSync(path.join(root, 'content', 'alias.md')).isSymbolicLink()).toBe(false);
+  });
+
+  it('refuses symlinks that lead into a dot-folder inside the content folder', async () => {
+    fs.mkdirSync(path.join(root, 'content', '.hidden'));
+    fs.symlinkSync('.hidden', path.join(root, 'content', 'peek'));
+    expect((await put('peek/x.md', 'x')).status).toBe(400);
+    expect((await api(fileRoute('peek/x.md'))).status).toBe(400);
+  });
+
   it('rejects writes without the X-HQ header', async () => {
     const res = await api(fileRoute('a.md'), { method: 'PUT', body: 'x', headers: { 'X-HQ': null } });
     expect(res.status).toBe(403);
@@ -283,6 +310,7 @@ describe('local API', () => {
     const result = await (await post('/api/publish', { message: 'push me' })).json();
     expect(result).toMatchObject({ ok: true, pushed: true });
     expect(execFileSync('git', ['log', '--format=%s', 'main'], { cwd: remote, encoding: 'utf8' }).trim()).toBe('push me');
+    expect(git('rev-parse', '--abbrev-ref', '@{u}').trim()).toBe('origin/main');
     expect((await (await post('/api/pull')).json())).toEqual({ updated: 0 });
     fs.rmSync(remote, { recursive: true, force: true });
   });
@@ -423,8 +451,18 @@ describe('outside changes (/api/stamp)', () => {
   });
 });
 
+describe('redactCredentials', () => {
+  it('hides userinfo in URLs and leaves other text alone', () => {
+    expect(redactCredentials("fatal: unable to access 'https://me:ghp_abc@github.com/o/r.git/': 403")).toBe(
+      "fatal: unable to access 'https://***@github.com/o/r.git/': 403",
+    );
+    expect(redactCredentials('git@github.com: Permission denied')).toBe('git@github.com: Permission denied');
+  });
+});
+
 describe('normalizeGitHubUrl', () => {
   it.each([
+    ['https://github.com/owner/repo?access_token=x', undefined],
     ['https://github.com/owner/repo.git', 'https://github.com/owner/repo'],
     ['https://token@github.com/owner/repo', 'https://github.com/owner/repo'],
     ['git@github.com:owner/repo.git', 'https://github.com/owner/repo'],

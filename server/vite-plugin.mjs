@@ -42,6 +42,10 @@ export function projectHqApi() {
     const h = getHandler();
     for (const dir of configuredContentDirs()) contentDirs.push(...contentDirVariants(dir));
     // Runs before Vite's own static / transform / `/@fs/` middlewares (configure hooks run before they are added).
+    server.middlewares.use((_req, res, next) => {
+      res.setHeader('X-Frame-Options', 'DENY'); // no framing by other sites (clickjacking)
+      next();
+    });
     server.middlewares.use(contentGuardMiddleware({ root: server.config.root, contentDirs, base: server.config.base }));
     server.middlewares.use(h);
   };

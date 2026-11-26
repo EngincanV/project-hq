@@ -28,6 +28,9 @@ const NO_CACHE = new Set(['sw.js', 'index.html', 'manifest.webmanifest']);
 export function createStaticHandler(distDir) {
   const DIST = path.resolve(distDir);
   return async function serveStatic(req, res) {
+    // Never inside a frame of another site (clickjacking of Publish / Discard / Delete).
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
     // Same Host rule as the API: a page on another site that rebinds its DNS name to 127.0.0.1 gets nothing.
     if (!isAllowedHost(req)) {
       res.statusCode = 403;

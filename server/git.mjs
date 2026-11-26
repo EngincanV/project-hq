@@ -45,9 +45,9 @@ export function normalizeGitHubUrl(url) {
   if (!url) return undefined;
   const s = url.trim();
   const patterns = [
-    /^https?:\/\/(?:[^@/]+@)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
-    /^(?:ssh:\/\/)?git@github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
-    /^git:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i,
+    /^https?:\/\/(?:[^@/]+@)?github\.com\/([^/?#]+)\/([^/?#]+?)(?:\.git)?\/?$/i,
+    /^(?:ssh:\/\/)?git@github\.com[:/]([^/?#]+)\/([^/?#]+?)(?:\.git)?\/?$/i,
+    /^git:\/\/github\.com\/([^/?#]+)\/([^/?#]+?)(?:\.git)?\/?$/i,
   ];
   for (const re of patterns) {
     const m = re.exec(s);

@@ -52,6 +52,11 @@ export const CODES = /** @type {const} */ ({
 
 const DEMO_REASON = 'Demo content: publishing is turned off. Run `npm run setup` to use your own content folder.';
 
+/** Removes credentials embedded in URLs (`https://user:token@host`) from git output before it reaches the UI. */
+export function redactCredentials(text) {
+  return String(text).replace(/([a-z][a-z0-9+.-]*:\/\/)[^@\s/]+@/gi, '$1***@');
+}
+
 class HttpError extends Error {
   /** @param {number} status @param {string} message @param {string} code */
   constructor(status, message, code) {
@@ -225,6 +230,11 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
         const r = await fs.realpath(probe);
         const full = path.join(r, ...rest.reverse());
         if (full !== real && !full.startsWith(real + path.sep)) throw new HttpError(400, 'path escapes the content folder', CODES.invalidPath);
+        // A symlink must not lead into a dot-folder inside the content folder either (e.g. `.git` when the
+        // content folder is the repo root).
+        if (path.relative(real, full).split(path.sep).some((seg) => seg.startsWith('.') && seg !== '')) {
+          throw new HttpError(400, 'dot-files are not allowed', CODES.invalidPath);
+        }
         return full;
       } catch (e) {
         if (e instanceof HttpError) throw e;
@@ -233,6 +243,16 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
         probe = path.dirname(probe);
       }
     }
+  }
+
+  /**
+   * Like resolveSafe, but resolves only the parent folder: the result names the entry itself, so writes replace a
+   * symlink instead of writing through it, and deletes remove the link, never its target (or the content root).
+   */
+  async function resolveEntry(rel) {
+    const slash = rel.lastIndexOf('/');
+    const parent = slash === -1 ? await realContent() : await resolveSafe(rel.slice(0, slash));
+    return path.join(parent, rel.slice(slash + 1));
   }
 
   async function listFiles(prefix) {
@@ -369,10 +389,10 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     let committed = false;
     if (diff.code === 1) {
       const c = await git(rootAbs, ['commit', '-q', '-m', message, '--', contentSpec]);
-      if (c.code !== 0) return { ok: false, pushed: false, error: (c.stderr || c.stdout).trim() || 'git commit failed', code: CODES.commitFailed };
+      if (c.code !== 0) return { ok: false, pushed: false, error: redactCredentials((c.stderr || c.stdout).trim()) || 'git commit failed', code: CODES.commitFailed };
       committed = true;
     } else if (diff.code !== 0) {
-      return { ok: false, pushed: false, error: diff.stderr.trim() || 'git diff failed', code: CODES.diffFailed };
+      return { ok: false, pushed: false, error: redactCredentials(diff.stderr.trim()) || 'git diff failed', code: CODES.diffFailed };
     }
     const headR = await git(rootAbs, ['rev-parse', 'HEAD']);
     const commitSha = headR.code === 0 ? headR.stdout.trim() : undefined;
@@ -397,9 +417,10 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     // `message` is informational; `error` only reports a push that was attempted and failed.
     const base = { ok: true, commitSha, commitUrl };
     if (!state.remote) return { ...base, pushed: false, message: 'Committed locally (no git remote configured)', code: CODES.committedLocal };
-    const pushArgs = state.upstream ? ['push'] : ['push', '-u', state.remote, state.branch];
+    // `--end-of-options` and a full ref: a remote or branch name that starts with `-` is never read as an option.
+    const pushArgs = state.upstream ? ['push'] : ['push', '-u', '--end-of-options', state.remote, `refs/heads/${state.branch}`];
     const p = await git(rootAbs, pushArgs, { timeout: 120_000 });
-    if (p.code !== 0) return { ...base, pushed: false, error: (p.stderr || p.stdout).trim() || 'git push failed', code: CODES.pushFailed };
+    if (p.code !== 0) return { ...base, pushed: false, error: redactCredentials((p.stderr || p.stdout).trim()) || 'git push failed', code: CODES.pushFailed };
     return { ...base, pushed: true, ...(committed ? {} : { message: 'No new changes; pushed earlier commits', code: CODES.pushedEarlier }) };
   }
 
@@ -431,7 +452,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
         await git(top, ['rm', '-q', '--cached', '--ignore-unmatch', '--', ...specs.slice(i, i + 100)]);
       }
       for (const t of untracked) {
-        const abs = await resolveSafe(t.path);
+        const abs = await resolveEntry(t.path);
         await fs.rm(abs, { force: true });
         await removeEmptyParents(abs);
       }
@@ -443,7 +464,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     if (!state.isRepo || !state.remote || !state.upstream || !state.hasHead) return { updated: 0 };
     const before = (await gitOk(rootAbs, ['rev-parse', 'HEAD'])).trim();
     const r = await git(rootAbs, ['pull', '--ff-only'], { timeout: 120_000 });
-    if (r.code !== 0) throw new HttpError(409, (r.stderr || r.stdout).trim() || 'git pull failed', CODES.pullFailed);
+    if (r.code !== 0) throw new HttpError(409, redactCredentials((r.stderr || r.stdout).trim()) || 'git pull failed', CODES.pullFailed);
     const after = (await gitOk(rootAbs, ['rev-parse', 'HEAD'])).trim();
     if (before === after) return { updated: 0 };
     const d = await gitOk(rootAbs, ['diff', '--name-only', '-z', before, after, '--', contentSpec]);
@@ -498,7 +519,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
         }
         if (method === 'PUT') {
           const body = await readBody(req, BODY_LIMIT);
-          const abs = await resolveSafe(rel);
+          const abs = await resolveEntry(rel);
           await fs.mkdir(path.dirname(abs), { recursive: true });
           const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.${process.pid}.${Date.now()}.tmp`);
           await fs.writeFile(tmp, body);
@@ -506,7 +527,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
           return send(res, 200, { ok: true });
         }
         if (method === 'DELETE') {
-          const abs = await resolveSafe(rel);
+          const abs = await resolveEntry(rel);
           if (url.searchParams.get('dir') === '1') await fs.rm(abs, { recursive: true, force: true });
           else {
             try {
@@ -555,7 +576,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
       const status = err instanceof HttpError ? err.status : 500;
       if (status === 500) console.error('[project-hq api]', err);
       const code = err instanceof HttpError ? err.code : CODES.serverError;
-      if (!res.headersSent) send(res, status, { error: err instanceof Error ? err.message : String(err), code });
+      if (!res.headersSent) send(res, status, { error: redactCredentials(err instanceof Error ? err.message : String(err)), code });
       else res.end();
     });
   };
