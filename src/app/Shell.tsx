@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { DesktopUpdateBanner } from '../desktop';
 import { NewProjectDialog } from '../features/dashboard/NewProjectDialog';
 import { UpdateBanner } from '../pwa';
 import { cx } from '../ui';
@@ -60,6 +61,7 @@ export function Shell() {
         </main>
       </div>
       <UpdateBanner />
+      <DesktopUpdateBanner />
       <NewProjectDialog
         open={newProjectOpen}
         onClose={() => setNewProjectOpen(false)}

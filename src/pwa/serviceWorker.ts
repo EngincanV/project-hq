@@ -1,6 +1,7 @@
 // Service worker registration (production builds only) and the "update available" state.
 // `registerType: 'prompt'`: a new version waits until the user chooses to reload.
 import { useSyncExternalStore } from 'react';
+import { isDesktop } from '../desktop/bridge';
 
 let needRefresh = false;
 let applyUpdate: ((reload?: boolean) => Promise<void>) | null = null;
@@ -13,11 +14,13 @@ function setNeedRefresh(value: boolean) {
 }
 
 /**
- * Registers the service worker once. A no-op in dev and tests (the PWA plugin is disabled there).
+ * Registers the service worker once. A no-op in dev and tests (the PWA plugin is disabled there) and in the
+ * desktop app, which ships its files with the app and updates through its own updater (a service worker would
+ * keep serving the previous version's cached files after an update).
  * The module is bundled into the app, so registration needs no inline script (CSP `script-src 'self'`).
  */
 export async function startServiceWorker(): Promise<void> {
-  if (started || !import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  if (started || !import.meta.env.PROD || !('serviceWorker' in navigator) || isDesktop()) return;
   started = true;
   const { registerSW } = await import('./register');
   applyUpdate = registerSW({
