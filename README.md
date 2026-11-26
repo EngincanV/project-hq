@@ -25,8 +25,10 @@ tool, store notes in another and console bookmarks in a third, and who want to o
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [How it works](#how-it-works)
+- [Two ways to run it: desktop app or from source](#two-ways-to-run-it)
+- [Desktop app (macOS and Windows)](#desktop-app-macos-and-windows)
 - [Prerequisites](#prerequisites)
-- [Quick start](#quick-start)
+- [Quick start (from source, in the browser)](#quick-start-from-source-in-the-browser)
 - [Configuration](#configuration)
 - [Integrations: GitHub, Google Play, App Store, AdMob](#integrations)
 - [Publishing: how commit and push work](#publishing-how-commit-and-push-work)
@@ -36,6 +38,7 @@ tool, store notes in another and console bookmarks in a third, and who want to o
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Security notes](#security-notes)
 - [Development](#development)
+- [Releasing (maintainers)](#releasing-maintainers)
 - [Contributing](#contributing)
 - [Limitations and known gaps](#limitations-and-known-gaps)
 - [License](#license)
@@ -102,26 +105,143 @@ All screenshots show the bundled, fictional demo content.
 
 - **The app** (`src/`) is React + TypeScript with plain CSS modules. Every feature reads and writes files through one
   small storage interface (`src/storage/types.ts`), so it does not care where the files live.
-- **Local mode** (`npm start` / `npm run dev`): a zero-dependency Node server (`server/`) serves the app and a local API on
+- **Local mode** (`npm start` / `npm run dev`, or the desktop app): a zero-dependency Node server (`server/`) serves the app and a local API on
   `127.0.0.1`. The API reads and writes files in your content folder and runs your own `git` for Publish / Discard /
   Refresh. It also exposes a cheap fingerprint of the content folder that the app polls, which is how outside changes
   show up without a reload.
 - **PWA / GitHub mode** (static hosting such as GitHub Pages): there is no server. The app talks to the GitHub REST API
   with a fine-grained token you enter in Settings. Edits are kept as drafts in the browser and Publish makes one commit.
+- **Desktop app** (Electron): the same local mode in its own window. It starts the same server (`startServer()` in
+  `server/server.mjs`) on a free `127.0.0.1` port and shows it; only where settings are stored differs.
 - **The app picks its mode by itself**: if `./api/health` answers, it is local mode; otherwise GitHub mode.
 - **Two repositories.** This repo (the app) never contains your data. Your content lives in its own, usually private,
   repository, so updating the app is a plain `git pull`.
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Two ways to run it
+
+Both options are the same app from the same code, and both keep your content in your own git repository:
+
+| | Desktop app | From source (browser) |
+| --- | --- | --- |
+| Install | download an installer from [Releases](https://github.com/EngincanV/project-hq/releases) | clone, `npm install`, `npm start` |
+| Needs | git | Node.js, npm and git |
+| Opens in | its own window | your browser at `http://127.0.0.1:4173` |
+| Settings stored in | `settings.json` in the app's data folder | `.env.local` in the app folder |
+| Updates | built in (see [Updates](#updates)) | `git pull` |
+
+The PWA on a phone ([below](#using-it-on-your-phone-pwa)) is a third way, for GitHub mode.
+
+## Desktop app (macOS and Windows)
+
+### Download and install
+
+Get the latest version from [GitHub Releases](https://github.com/EngincanV/project-hq/releases):
+
+- **macOS:** `Project-HQ-<version>-mac-arm64.dmg` for Apple silicon (M1 and later) or `…-mac-x64.dmg` for Intel Macs.
+  Open the dmg and drag **Project HQ** into **Applications**.
+- **Windows:** `Project-HQ-Setup-<version>.exe`. It installs for your user only (no administrator rights needed) and adds
+  a Start menu shortcut.
+
+### First launch of an unsigned build
+
+Release builds are not code-signed unless the maintainer has added signing certificates, so the operating system warns
+the first time:
+
+- **macOS** says the app "cannot be opened because the developer cannot be verified" (or that it is "damaged"). In
+  Finder, **right-click** (or Control-click) **Project HQ** in Applications → **Open** → **Open**. If macOS still refuses,
+  run this once in Terminal and open the app again:
+
+  ```sh
+  xattr -cr "/Applications/Project HQ.app"
+  ```
+
+- **Windows** shows "Windows protected your PC" (SmartScreen). Click **More info** → **Run anyway**.
+
+You only need to do this once per installed version.
+
+### git must be installed
+
+The desktop app uses your own `git` for Publish, Discard and Refresh, exactly like `npm start`.
+
+- macOS: run `xcode-select --install` or install git with [Homebrew](https://brew.sh) (`brew install git`).
+- Windows: install [Git for Windows](https://git-scm.com/download/win).
+
+Apps opened from Finder or the Start menu do not see your terminal's `PATH`. Project HQ fixes that at start-up: on macOS
+it reads the `PATH` (and `SSH_AUTH_SOCK`) of your login shell and also looks in `/opt/homebrew/bin` and `/usr/local/bin`;
+on Windows it looks in the standard Git for Windows and GitHub CLI folders. Your SSH agent, the macOS keychain, Git
+Credential Manager and `gh` as a credential helper keep working.
+
+To check, open **Settings → Local repository**, enter or choose a folder and press **Test connection**. It shows whether
+git was found (and its version), whether the folder is a git repository, its branch and remote, and how many content
+files it has. "Git was not found" means git is not installed or is somewhere unusual; install it as above and restart the app.
+
+### Choose your content folder
+
+The first launch shows the demo content. Open **Settings → Local repository**, click **Choose folder** and pick your
+content repository (the folder that contains `content/`; create one with `npm run setup` from a clone, or use any git
+repository; the content folder is created on the first write). **Test connection**, then **Save**: the app switches
+folders right away, no restart needed.
+
+### Where desktop settings are stored
+
+| OS | Folder |
+| --- | --- |
+| macOS | `~/Library/Application Support/Project HQ/` |
+| Windows | `%APPDATA%\Project HQ\` (e.g. `C:\Users\<you>\AppData\Roaming\Project HQ\`) |
+
+`settings.json` holds the content folder (`root`, `contentDir`) and the last port used; `window-state.json` holds the
+window size and position. The app never reads `.env.local` or environment variables, so a shell variable cannot point it
+somewhere unexpected. Theme, language and GitHub-mode drafts live in the app's browser storage in the same folder.
+Development runs (`npm run desktop:dev`) use `Project HQ (dev)` instead, so they never touch an installed copy.
+
+### Open at login
+
+**Settings → Desktop app → Open at login** starts Project HQ when you log in. The same section shows the installed version.
+
+### Updates
+
+The app checks GitHub Releases shortly after start and every six hours (only published releases, never drafts or pre-releases).
+
+- **Windows** (and **signed** macOS builds): the update downloads in the background; a small notice offers **Restart**,
+  otherwise it installs the next time you quit.
+- **Unsigned macOS builds** cannot replace themselves (macOS only allows that for signed apps), so a small notice says a
+  new version is available, with a **Download** link to its release page. Install it like the first time.
+
+**Help → Check for Updates…** (on macOS: **Project HQ → Check for Updates…**) checks right away.
+
+### Run and build from source
+
+```sh
+npm install
+npm run desktop:dev      # Electron window on the Vite dev server, with hot reload
+npm run desktop:build    # builds the web app, then the installer for this OS into release/
+npm run desktop:smoke    # starts the main process with --smoke-test: checks /api/health and the preload, exits 0 or 1
+```
+
+`desktop:build` makes `release/Project-HQ-<version>-mac-arm64.dmg` and `…-mac-x64.dmg` (plus zips for updates) on macOS,
+and `release/Project-HQ-Setup-<version>.exe` on Windows. Build each OS on that OS.
+
+### One codebase
+
+The desktop app is not a second app. `electron/main.mjs` calls the same `startServer()` as `npm start` and loads it in a
+window; the React app, the local API, the content format and the security rules are shared. The only desktop-specific
+parts are the Electron files in `electron/` (main process, preload, menu, PATH fix, updates, window state), the
+`settings.json` branch of `server/config.mjs`, and a few UI pieces that appear only when `window.hq` exists (Choose folder,
+Open at login, version, update notice). Without Electron, the web version behaves exactly as before.
+
 ## Prerequisites
+
+For running from source (the desktop app needs only git):
+
 
 - [Node.js](https://nodejs.org) 22.22+, 24.15+ or 26+ (`.nvmrc` pins 24) and npm.
 - [git](https://git-scm.com), with `user.name` and `user.email` set (Publish makes commits).
 - Optional: a GitHub account, to back your content up in a private repository and to use the PWA on a phone.
 - Optional: [Claude Code](https://docs.claude.com/en/docs/claude-code/overview), see [below](#using-project-hq-with-claude-code).
 
-## Quick start
+## Quick start (from source, in the browser)
 
 ```sh
 git clone https://github.com/EngincanV/project-hq.git   # or your fork
@@ -190,7 +310,8 @@ In the GitHub Pages workflow the two `VITE_*` values come from the repository **
 | Where | Setting | Stored in |
 | --- | --- | --- |
 | Settings → GitHub connection (PWA mode) | Repository (`owner/repo`), branch, content folder, access token | this browser's `localStorage` |
-| Settings → Local repository (local mode) | Read-only: repository, **content folder path** (with a copy button), GitHub remote, whether Publish works | — (comes from `HQ_ROOT` / `HQ_CONTENT_DIR`) |
+| Settings → Local repository (local mode) | Repository folder and content folder (with **Test connection**; **Choose folder** in the desktop app); shows the content folder path, GitHub remote and whether Publish works | `.env.local` (`HQ_ROOT`, `HQ_CONTENT_DIR`) from source; `settings.json` in the desktop app |
+| Settings → Desktop app (desktop only) | Open at login; shows the version | the operating system's login items |
 | Settings → Appearance | Theme (light / dark / system) | this browser |
 | Top bar | Language (English / Türkçe) | this browser |
 | Project → Overview | Name, tagline, type, status, emoji, colour, enabled tabs (Stores, Ads), code repositories, website | `projects/<slug>/project.json` |
@@ -198,8 +319,9 @@ In the GitHub Pages workflow the two `VITE_*` values come from the repository **
 | Project → Ads | AdMob publisher id, Android / iOS app ids, dashboard URL | `project.json` + `ads/admob.md` |
 | Project → Links | Any console / dashboard links, with presets | `project.json` |
 
-To use a different content folder in local mode, run `npm run setup` again (or edit `HQ_ROOT` in `.env.local`) and
-restart the server.
+To use a different content folder in local mode, choose it in **Settings → Local repository** and press **Save** (the
+switch is immediate), or run `npm run setup` again / edit `HQ_ROOT` in `.env.local` and restart the server. When `HQ_ROOT`
+is set as an environment variable it wins, and the form says so instead of saving.
 
 ## Integrations
 
@@ -485,18 +607,42 @@ npm run build             # type-check and production build into dist/
 npm run sandbox -- 5190   # dev server on a throw-away git copy of the demo content (publishing works)
 ```
 
-`npm run dev` follows the same rule as `npm start`: demo content until `npm run setup` has been run (or `HQ_ROOT` is set).
+`npm run dev` follows the same rule as `npm start`: demo content until a folder is chosen in Settings, `npm run setup` has
+been run, or `HQ_ROOT` is set. Desktop commands are in [Run and build from source](#run-and-build-from-source).
 
 Repository layout:
 
 ```
 src/          React app: app shell, features/* (one folder per tab), data/ (models), storage/ (local + GitHub adapters)
-server/       zero-dependency Node server: local API, git helpers, static files, Vite plugin
-scripts/      npm run setup / sandbox
+server/       zero-dependency Node server: startServer(), local API, settings, git helpers, static files, Vite plugin
+electron/     desktop app: main process, preload (window.hq), menu, PATH fix, updates, window state
+build/        desktop app icons (generated from public/logo.svg by npm run icons:desktop)
+scripts/      npm run setup / sandbox / desktop icons
 templates/    files copied into new content repos (CLAUDE.md)
 content/      fictional demo content (also used by tests)
 docs/         architecture notes and screenshots
 ```
+
+## Releasing (maintainers)
+
+1. Set `"version"` in `package.json` (e.g. `0.2.0`), commit, then tag and push the tag:
+   `git tag v0.2.0 && git push origin v0.2.0`.
+2. [`.github/workflows/desktop-release.yml`](.github/workflows/desktop-release.yml) runs the tests, builds on
+   `macos-latest` (dmg + zip, arm64 and x64) and `windows-latest` (installer), smoke-tests the macOS app and uploads
+   everything, including `latest.yml` / `latest-mac.yml` for the updater, to a **draft** release. The tag must match
+   the `package.json` version.
+3. Check the draft on the Releases page, edit the notes and **Publish** it. Installed apps see the new version only after that.
+
+Signing is optional; without these repository secrets the builds are unsigned and still work:
+
+| Secret | For |
+| --- | --- |
+| `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` | macOS Developer ID Application certificate (`.p12`, base64) and its password. Enables signing and macOS auto-update. |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Notarization (only runs when the app is signed). |
+| `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` | Windows code-signing certificate (`.pfx`, base64) and its password. Avoids the SmartScreen warning once the certificate has a reputation. |
+
+Locally the same variables work with `npm run desktop:build` (`CSC_LINK` / `CSC_KEY_PASSWORD` on macOS); see
+[`electron-builder.yml`](electron-builder.yml).
 
 ## Contributing
 
@@ -510,7 +656,9 @@ run `npm run typecheck && npm test && npm run build` before opening a pull reque
 - Publishing through the GitHub API (PWA mode) has so far only been tested against a simulated GitHub in the test suite, not against github.com.
 - Live refresh of outside changes works in local mode only, and edits to the same file from two places are last-write-wins.
 - One person, one content repo: there are no accounts, sharing or real-time collaboration. Conflicts are detected per file, not merged.
-- Local mode needs Node and git on the machine; PWA mode needs a GitHub account and token.
+- Local mode needs git on the machine (and Node when run from source); PWA mode needs a GitHub account and token.
+- Desktop builds are unsigned unless signing secrets are configured: expect the first-launch warnings above, and no
+  self-update on macOS. There is no Linux package yet (run from source).
 - UI languages: English and Turkish.
 
 ## License

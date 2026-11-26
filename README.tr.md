@@ -10,7 +10,110 @@ Yazdığın her şey kendi git deponda düz Markdown ve JSON olarak durur; **Yay
 
 > **Durum: erken `0.1` sürümü.** Pürüzler olabilir. Bkz. [Bilinen eksikler](#sınırlar-ve-bilinen-eksikler).
 
-## Hızlı başlangıç
+## İki çalıştırma yolu
+
+İkisi de aynı koddan çıkan aynı uygulamadır ve içeriğini kendi git deponda tutar:
+
+| | Masaüstü uygulaması | Kaynaktan (tarayıcıda) |
+| --- | --- | --- |
+| Kurulum | [Releases](https://github.com/EngincanV/project-hq/releases) sayfasından yükleyiciyi indir | clone, `npm install`, `npm start` |
+| Gerekenler | git | Node.js, npm ve git |
+| Açıldığı yer | kendi penceresi | tarayıcıda `http://127.0.0.1:4173` |
+| Ayarların yeri | uygulama veri klasöründeki `settings.json` | uygulama klasöründeki `.env.local` |
+| Güncelleme | yerleşik (bkz. [Güncellemeler](#güncellemeler)) | `git pull` |
+
+## Masaüstü uygulaması (macOS ve Windows)
+
+### İndirme ve kurulum
+
+Son sürümü [GitHub Releases](https://github.com/EngincanV/project-hq/releases) sayfasından indir:
+
+- **macOS:** Apple silicon (M1 ve sonrası) için `Project-HQ-<sürüm>-mac-arm64.dmg`, Intel Mac için `…-mac-x64.dmg`.
+  dmg'yi aç ve **Project HQ**'yu **Uygulamalar** klasörüne sürükle.
+- **Windows:** `Project-HQ-Setup-<sürüm>.exe`. Yalnızca senin kullanıcın için kurulur (yönetici yetkisi gerekmez) ve
+  Başlat menüsüne kısayol ekler.
+
+### İmzasız sürümün ilk açılışı
+
+Bakımcı imza sertifikası eklemediği sürece sürümler imzasızdır; işletim sistemi ilk açılışta uyarır:
+
+- **macOS** "geliştirici doğrulanamadığı için açılamıyor" (ya da "hasarlı") der. Finder'da Uygulamalar içindeki
+  **Project HQ**'ya **sağ tıkla** (ya da Control-tık) → **Aç** → **Aç**. macOS yine reddederse Terminal'de bir kez şunu
+  çalıştırıp uygulamayı yeniden aç:
+
+  ```sh
+  xattr -cr "/Applications/Project HQ.app"
+  ```
+
+- **Windows** "Windows bilgisayarınızı korudu" (SmartScreen) der. **Ek bilgi** → **Yine de çalıştır**'a tıkla.
+
+Bunu her kurulu sürüm için yalnızca bir kez yaparsın.
+
+### git kurulu olmalı
+
+Masaüstü uygulaması Yayınla, Vazgeç ve Yenile için `npm start` gibi senin `git`'ini kullanır.
+
+- macOS: `xcode-select --install` çalıştır ya da [Homebrew](https://brew.sh) ile kur (`brew install git`).
+- Windows: [Git for Windows](https://git-scm.com/download/win) kur.
+
+Finder'dan ya da Başlat menüsünden açılan uygulamalar terminalindeki `PATH`'i görmez. Project HQ bunu açılışta düzeltir:
+macOS'te giriş kabuğunun `PATH` (ve `SSH_AUTH_SOCK`) değerini okur, ayrıca `/opt/homebrew/bin` ve `/usr/local/bin`'e bakar;
+Windows'ta standart Git for Windows ve GitHub CLI klasörlerine bakar. SSH ajanın, macOS anahtar zinciri, Git Credential
+Manager ve kimlik yardımcısı olarak `gh` çalışmaya devam eder.
+
+Denetlemek için **Ayarlar → Yerel depo**'da bir klasör yaz ya da seç ve **Bağlantıyı test et**'e bas. git'in bulunup
+bulunmadığını (ve sürümünü), klasörün git deposu olup olmadığını, dalını, uzak deposunu ve içerik dosyası sayısını gösterir.
+"Git bulunamadı" görürsen git'i yukarıdaki gibi kur ve uygulamayı yeniden başlat.
+
+### İçerik klasörünü seçmek
+
+İlk açılış demo içeriği gösterir. **Ayarlar → Yerel depo**'da **Klasör seç**'e tıkla ve içerik deponu seç (`content/`
+klasörünü barındıran klasör; bir clone'da `npm run setup` ile oluşturabilir ya da herhangi bir git deposunu kullanabilirsin).
+**Bağlantıyı test et**, sonra **Kaydet**: uygulama yeniden başlatmadan hemen o klasöre geçer.
+
+### Masaüstü ayarları nerede saklanır
+
+| İşletim sistemi | Klasör |
+| --- | --- |
+| macOS | `~/Library/Application Support/Project HQ/` |
+| Windows | `%APPDATA%\Project HQ\` (ör. `C:\Users\<sen>\AppData\Roaming\Project HQ\`) |
+
+`settings.json` içerik klasörünü (`root`, `contentDir`) ve son kullanılan portu, `window-state.json` pencere boyutunu ve
+konumunu tutar. Uygulama `.env.local`'ı ya da ortam değişkenlerini okumaz. Tema, dil ve GitHub modu taslakları aynı
+klasördeki tarayıcı depolamasında durur. Geliştirme çalıştırmaları (`npm run desktop:dev`) `Project HQ (dev)` klasörünü kullanır.
+
+### Oturum açınca başlat
+
+**Ayarlar → Masaüstü uygulaması → Oturum açınca başlat**, oturum açtığında Project HQ'yu başlatır. Aynı bölüm kurulu sürümü gösterir.
+
+### Güncellemeler
+
+Uygulama açıldıktan kısa süre sonra ve altı saatte bir GitHub Releases'ı kontrol eder (yalnızca yayınlanmış sürümler).
+
+- **Windows** (ve **imzalı** macOS sürümleri): güncelleme arka planda iner; küçük bir uyarı **Yeniden başlat** önerir,
+  yoksa bir sonraki çıkışta kurulur.
+- **İmzasız macOS sürümleri** kendini güncelleyemez (macOS buna yalnızca imzalı uygulamalarda izin verir); küçük bir
+  uyarı yeni sürümü sürüm sayfasına giden **İndir** bağlantısıyla gösterir. İlk kurulumdaki gibi kurarsın.
+
+**Help → Check for Updates…** (macOS'te **Project HQ → Check for Updates…**) hemen kontrol eder.
+
+### Kaynaktan çalıştırma ve derleme
+
+```sh
+npm install
+npm run desktop:dev      # Vite geliştirme sunucusunda Electron penceresi, anında yenilemeyle
+npm run desktop:build    # web uygulamasını, sonra bu işletim sistemi için yükleyiciyi release/ içine derler
+npm run desktop:smoke    # ana süreci --smoke-test ile başlatır: /api/health ve preload'u denetler, 0 ya da 1 ile çıkar
+```
+
+### Tek kod tabanı
+
+Masaüstü uygulaması ikinci bir uygulama değildir: `electron/main.mjs`, `npm start` ile aynı `startServer()`'ı çağırır ve
+bir pencerede açar. React uygulaması, yerel API, içerik biçimi ve güvenlik kuralları ortaktır. Masaüstüne özel olanlar
+`electron/` içindeki dosyalar, `server/config.mjs`'deki `settings.json` kolu ve yalnızca `window.hq` varken görünen birkaç
+arayüz parçasıdır (Klasör seç, Oturum açınca başlat, sürüm, güncelleme uyarısı). Web sürümü eskisi gibi çalışır.
+
+## Kaynaktan hızlı başlangıç (tarayıcıda)
 
 [Node.js](https://nodejs.org) 22.22+ ya da 24.15+ (bkz. `.nvmrc`) ve git gerekir.
 
@@ -114,7 +217,10 @@ git'e girmeyen `.env.local` dosyasıyla verilir; tüm değişkenler [`.env.examp
 | `VITE_HQ_REPO`, `VITE_HQ_BRANCH` | boş, `main` | PWA derlemesinde Ayarlar formunu önceden doldurur (herkese açık pakete girer; token koyma). |
 
 Uygulama içinde: GitHub bağlantısı (PWA), tema ve dil tarayıcıda; proje bilgileri, mağaza ve AdMob kimlikleri, bağlantılar
-kendi içerik deponda (`project.json`) saklanır. Yerel modda Ayarlar sayfası içerik klasörünün tam yolunu gösterir.
+kendi içerik deponda (`project.json`) saklanır. Yerel modda **Ayarlar → Yerel depo** içerik klasörünün tam yolunu gösterir;
+buradan başka bir klasör seçip **Bağlantıyı test et** ve **Kaydet** ile yeniden başlatmadan geçebilirsin. Kaynaktan
+çalışırken seçim `.env.local`'a (`HQ_ROOT`, `HQ_CONTENT_DIR`), masaüstü uygulamasında `settings.json`'a yazılır.
+`HQ_ROOT` ortam değişkeni olarak tanımlıysa o geçerlidir ve form bunu söyler.
 
 ## Claude Code ile kullanmak
 
@@ -258,7 +364,21 @@ npm run build        # tip denetimi ve dist/ içine üretim derlemesi
 npm run sandbox -- 5190   # demo içeriğin atılabilir bir git kopyasında geliştirme sunucusu (yayınlama çalışır)
 ```
 
-`npm run dev` de `npm start` ile aynı kuralı izler: `npm run setup` çalıştırılana (ya da `HQ_ROOT` ayarlanana) kadar demo içerik gösterir.
+`npm run dev` de `npm start` ile aynı kuralı izler: Ayarlar'dan bir klasör seçilene, `npm run setup` çalıştırılana (ya da `HQ_ROOT`
+ayarlanana) kadar demo içerik gösterir. Masaüstü komutları için bkz. [Kaynaktan çalıştırma ve derleme](#kaynaktan-çalıştırma-ve-derleme).
+
+### Sürüm çıkarmak (bakımcılar)
+
+1. `package.json` içindeki `"version"` değerini ayarla (ör. `0.2.0`), commit'le, sonra etiketi oluşturup gönder:
+   `git tag v0.2.0 && git push origin v0.2.0`.
+2. [`.github/workflows/desktop-release.yml`](.github/workflows/desktop-release.yml) testleri çalıştırır, `macos-latest`
+   (dmg + zip, arm64 ve x64) ve `windows-latest` (yükleyici) üzerinde derler ve güncelleyici için `latest*.yml` dahil her
+   şeyi **taslak** bir sürüme yükler. Etiket `package.json` sürümüyle aynı olmalı.
+3. Releases sayfasında taslağı kontrol et, notları düzenle ve **Publish**'e bas. Kurulu uygulamalar yeni sürümü ancak o zaman görür.
+
+İmzalama isteğe bağlıdır; bu depo sırları yoksa sürümler imzasız derlenir ve yine çalışır: `MAC_CSC_LINK`,
+`MAC_CSC_KEY_PASSWORD` (macOS Developer ID sertifikası, base64 `.p12` ve şifresi), `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
+`APPLE_TEAM_ID` (notarization), `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` (Windows imza sertifikası). Ayrıntılar İngilizce README'de.
 Kod React + TypeScript, düz CSS modülleri ve bağımlılıksız bir Node sunucusundan oluşur. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ile başla;
 katkılar memnuniyetle karşılanır, bkz. [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -268,7 +388,9 @@ katkılar memnuniyetle karşılanır, bkz. [CONTRIBUTING.md](CONTRIBUTING.md).
 - GitHub API üzerinden yayınlama (PWA modu) şimdiye kadar yalnızca test paketindeki simüle edilmiş bir GitHub'a karşı denendi, github.com'a karşı değil.
 - GitHub Pages dağıtım iş akışı henüz hiç çalışmadı.
 - Tek kişi, tek içerik deposu: hesaplar, paylaşım ya da gerçek zamanlı ortak çalışma yok. Çakışmalar dosya bazında algılanır, birleştirilmez.
-- Yerel mod bilgisayarda Node ve git ister; PWA modu bir GitHub hesabı ve token ister.
+- Yerel mod bilgisayarda git ister (kaynaktan çalışırken Node da); PWA modu bir GitHub hesabı ve token ister.
+- Masaüstü sürümleri imza sırları tanımlanmadıkça imzasızdır: yukarıdaki ilk açılış uyarılarını bekle; macOS'te kendini
+  güncelleme yok. Henüz Linux paketi yok (kaynaktan çalıştır).
 - Demo takvimdeki günler bugünün tarihine göre kayar, ama demo içeriğin geri kalanı sabittir.
 - Arayüz dilleri: Türkçe ve İngilizce.
 

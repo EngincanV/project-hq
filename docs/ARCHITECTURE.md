@@ -11,6 +11,9 @@ Runs two ways from the same build:
 | `local` | `npm run dev` / `npm start` on the laptop | straight to files in `content/` | `git commit` + `git push` through the local API |
 | `github` | installed PWA / static hosting | drafts in IndexedDB on top of the repo tree | one commit through the GitHub Git Data API (PAT) |
 
+The **desktop app** (Electron, macOS + Windows) is `local` mode in its own window: it runs the same server and the same
+build, see [Desktop app](#desktop-app-electron).
+
 The app decides at start-up: `GET ./api/health` answers with `{"app":"project-hq"}` → `local`, otherwise `github`.
 
 ## App repo and content repo
@@ -202,11 +205,26 @@ export interface Storage {
 
 ## Local API (`server/`)
 
-`server/api.mjs` exports `createApiHandler({ root, contentDir, demo })` → `(req, res, next)`; mounted by
-`server/vite-plugin.mjs` (dev + preview) and by `server/index.mjs` (`npm start`: runs `vite build` first when
-`dist/index.html` is missing or older than `src/`, `public/`, `index.html`, `vite.config.ts` or the package files
-(`server/build.mjs`), then serves `dist/` + API on `127.0.0.1`; `--open` opens the browser). Env: `HQ_ROOT`
-(content repo root; unset = demo mode), `HQ_CONTENT_DIR` (default `content`), `PORT` (default 4173).
+Layers, bottom up:
+
+- `server/api.mjs`: `createApiHandler({ root, contentDir, demo, watchIntervalMs, port })` → `(req, res, next)`, the
+  content API for one folder.
+- `server/config.mjs`: `createConfigStore({ mode: 'web' | 'desktop', projectDir, userDataDir })` → `{ load(), save(),
+  remember() }`, the one place settings come from. `web`: environment, then `.env.local` (`server/env.mjs`), then defaults;
+  `save()` merges `HQ_ROOT` / `HQ_CONTENT_DIR` into `.env.local` and refuses (`env_override`) when the environment sets
+  `HQ_ROOT`. `desktop`: `settings.json` in Electron's `userData` (`root`, `contentDir`, `lastPort`); the environment is ignored.
+- `server/app.mjs`: `createAppHandler({ config, projectDir, port, root?, contentDir? })` adds the settings routes and swaps
+  the content API in place when the folder changes (no restart). A `root` passed in pins the folder (`pinned`).
+- `server/server.mjs`: `startServer({ port, host, root, contentDir, config, projectDir, distDir, dev, fallbackToRandomPort })`
+  → `{ port, url, server, current(), close() }`. Binds loopback only, serves `dist/` (`server/static.mjs`) or, with
+  `dev: true`, an embedded Vite dev server in middleware mode (HMR on the same port; the Vite plugin then stays out of
+  the way and this server mounts the API and the content guard). `port: 0` = random; `fallbackToRandomPort` retries with 0
+  on `EADDRINUSE`.
+- Callers: `server/index.mjs` (`npm start`: runs `vite build` first when `dist/index.html` is missing or older than
+  `src/`, `public/`, `index.html`, `vite.config.ts` or the package files (`server/build.mjs`); `--open` opens the browser),
+  `electron/main.mjs` (desktop), and `server/vite-plugin.mjs` (dev + preview; uses `createAppHandler` directly).
+
+Env (web mode): `HQ_ROOT` (content repo root; unset = demo mode), `HQ_CONTENT_DIR` (default `content`), `PORT` (default 4173).
 
 | Route | Does |
 | --- | --- |
@@ -220,6 +238,9 @@ export interface Storage {
 | `POST /api/discard` | `{ paths?: string[] }` → restore from HEAD / remove untracked |
 | `POST /api/publish` | `{ message }` → `git add` + `git commit` (content dir only) + `git push` when a remote exists; `PublishResult` (no remote / nothing to commit = `message`, failed push = `error`) |
 | `POST /api/pull` | `git pull --ff-only` when a remote exists |
+| `GET /api/settings` | `{ mode: 'web' \| 'desktop', root, contentDir, demo, file, envOverride, pinned }` (`root` is `''` in demo mode) |
+| `PUT /api/settings` | `{ root, contentDir }` → saves (`.env.local` / `settings.json`) and switches folders; `root: ''` = demo. Codes `root_not_found`, `root_not_directory`, `invalid_content_dir`, `env_override`, `pinned` |
+| `POST /api/settings/test` | `{ root, contentDir }` → `{ ok, gitVersion?, gitError?, folderExists, isRepo, branch?, remote?, remoteUrl?, contentExists, contentFiles }` (`server/repo-check.mjs`) |
 
 **Codes.** Every error response is `{ error, code }`; `reason` comes with `reasonCode`, and publish results carry
 `code` next to `message` / `error`. The codes are listed in `CODES` in `server/api.mjs` (`demo`, `not_a_repo`,
@@ -231,8 +252,10 @@ output (`commit_failed`, `push_failed`, …) are deliberately not translated, so
 
 Safety rules (non-negotiable):
 
-- Bind `127.0.0.1` only. Reject requests whose `Host` is not `localhost`/`127.0.0.1`/`[::1]` — on the API and on the
-  static files of `npm start` (`server/static.mjs`, which also answers 400 to malformed percent-encoding).
+- Bind `127.0.0.1` only (`startServer` refuses other hosts). Reject requests whose `Host` is not `localhost`/`127.0.0.1`/`[::1]`
+  — on the API and on the static files (`server/static.mjs`, which also answers 400 to malformed percent-encoding).
+  Under `startServer` the `Host` must also name the **bound port** (`isAllowedHost(req, port)`), which matters when the
+  port is chosen at random: a page served by another local server cannot pass the check by guessing the name.
 - Every API request, **GET included**, is refused (403 `forbidden`) when an `Origin` header is present and does not
   match the request's host, or when `Sec-Fetch-Site` is `cross-site` or `same-site` (`same-origin`, `none` and no header
   are allowed) — `crossSiteReason()` in `server/api.mjs`. Other loopback origins (`*.localhost`, other ports) are other sites.
@@ -242,7 +265,9 @@ Safety rules (non-negotiable):
 - Paths are normalised and must stay inside the content dir (no `..`, no absolute paths, no dot-files, symlinks
   resolved and not allowed to lead into dot-folders). Writes and deletes resolve only the parent folder, so they replace
   or remove a symlink itself rather than its target. `GET /api/file` answers with a `sandbox` CSP and `nosniff`.
-- No framing: `npm start` sends `X-Frame-Options: DENY` and `frame-ancestors 'none'`, the dev server sends
+- Settings routes follow the same rules (cross-site check, `X-HQ` on writes). A folder chosen there must exist; the content
+  folder must stay inside it.
+- No framing: `startServer` (npm start, desktop) sends `X-Frame-Options: DENY` and `frame-ancestors 'none'` on every response, the dev server sends
   `X-Frame-Options: DENY`, and `src/main.tsx` refuses to start inside a frame (static hosts cannot send headers).
 - The first push is `git push -u --end-of-options <remote> refs/heads/<branch>`; git output returned to the UI has
   credentials in URLs masked (`redactCredentials`).
@@ -263,8 +288,12 @@ GitHub Pages project site (`*.github.io/<repo>/`), whose origin is shared with e
 ## Source layout and ownership
 
 ```
-server/                     local API (api, git, env, demo, build helpers, content-guard, static, index = `npm start`)
-scripts/                    setup.mjs (+ setup-lib.mjs), sandbox.mjs
+server/                     local server (server = startServer, app = settings routes, config, api, repo-check, git,
+                            env, demo, build helpers, content-guard, static, index = `npm start`)
+electron/                   desktop app: main, preload (window.hq), menu, path-env, updater, window-state
+build/                      desktop icons (icon.png, icon.ico), generated by scripts/desktop-icons.mjs
+scripts/                    setup.mjs (+ setup-lib.mjs), sandbox.mjs, desktop-icons.mjs
+src/desktop/                window.hq type + getDesktop(), DesktopUpdateBanner
 content/                    demo content
 src/app/                    shell: App, routes, Sidebar, Topbar, ProjectLayout (tabs)
 src/ui/                     shared primitives: Button, IconButton, Input, Textarea, Select, Modal,
@@ -282,7 +311,8 @@ src/features/roadmap/       RoadmapTab
 src/features/stores/        StoresTab
 src/features/ads/           AdsTab
 src/features/links/         LinksTab (quick-launch cards, grouped)
-src/features/settings/      SettingsPage (GitHub connection, theme, language)
+src/features/settings/      SettingsPage (GitHub connection; local repository info + LocalRepoForm; desktop section;
+                            theme, language)
 src/features/publish/       PublishButton (topbar) + publish panel
 src/features/planner/       PlannerPage (week / month / day detail, backlog of open roadmap cards), dashboard
                             TodayBlock; model.ts + operations.ts + dates.ts are pure and unit-tested
@@ -290,7 +320,8 @@ src/features/planner/       PlannerPage (week / month / day detail, backlog of o
 
 ### Foundation details (as built)
 
-- `server/env.mjs` resolves `HQ_ROOT` / `HQ_CONTENT_DIR` / `PORT`: environment first, then `.env.local`, then defaults.
+- `server/env.mjs` resolves `HQ_ROOT` / `HQ_CONTENT_DIR` / `PORT` for web mode: environment first, then `.env.local`, then
+  defaults; it also holds `mergeEnvLine` / `hqRootValue`, shared by `npm run setup` and the Settings form.
   `npm run sandbox -- <port>` (`scripts/sandbox.mjs`) runs the dev server against a temp git copy of `content/`
   (sets `HQ_ROOT`, so it is not demo mode and publishing works into the temp repo).
 - `src/storage/`: `detect.ts` (`getStorage`, `getStorageSetup`, `resetStorage`), `StorageProvider.tsx`
@@ -308,6 +339,39 @@ src/features/planner/       PlannerPage (week / month / day detail, backlog of o
 Routes (hash): `/` dashboard · `/plan[/:date]` planner (opens on the week of `date`, `YYYY-MM-DD`) ·
 `/p/:slug` overview · `/p/:slug/notes[/:note]` · `/p/:slug/roadmap` · `/p/:slug/stores` · `/p/:slug/ads` ·
 `/p/:slug/links` · `/settings`.
+
+## Desktop app (Electron)
+
+Plain Electron + electron-builder (no Forge, no electron-vite). `package.json` `main` is `electron/main.mjs`.
+
+- **Start-up.** `fixProcessEnv()` (`electron/path-env.mjs`) repairs `PATH` for GUI launches: macOS asks the login shell
+  (`$SHELL -ilc`, 5 s timeout) for `PATH` and `SSH_AUTH_SOCK` (the latter only when unset), then adds existing fallback
+  folders (`/opt/homebrew/bin`, `/usr/local/bin`, …); Windows adds existing Git for Windows / GitHub CLI / scoop folders.
+  Entries are only added, never removed. Then `startServer({ config: desktop store, port: lastPort, fallbackToRandomPort })`:
+  reusing the last port keeps the origin, and so `localStorage` / IndexedDB, stable across launches.
+- **Window.** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, preload `electron/preload.mjs` (run as a
+  plain script in the sandbox). `will-navigate` / `will-redirect` allow only the server origin; other http(s)/mailto URLs
+  open in the default browser; `setWindowOpenHandler` always denies; webviews are blocked; every permission request
+  and check is denied except `clipboard-sanitized-write` from the app origin (copy buttons). DevTools only in unpackaged runs.
+  Bounds are saved in `window-state.json` and restored only when on a connected display.
+- **`window.hq`** (`DesktopApi` in `src/desktop/bridge.ts`): `isDesktop`, `version` (passed via `additionalArguments`),
+  `platform`, `pickFolder()`, `getOpenAtLogin()`, `setOpenAtLogin()`, `getUpdateState()`, `onUpdateState()`,
+  `installUpdate()`. Each IPC handler checks that `event.senderFrame.url` has the server origin. UI code calls
+  `getDesktop()` and renders desktop-only parts (Choose folder, Desktop app section, update notice) only when it exists.
+  The service worker is not registered in the desktop app.
+- **Lifecycle.** Single-instance lock (`second-instance` focuses the window); macOS keeps running with no window;
+  `will-quit` waits for `running.close()` (max 3 s). Menu: app (macOS), File, Edit (roles, so Cmd+C/V/Z work), View,
+  Window, Help (docs, releases, issues, check for updates). Unpackaged runs use `userData` = `Project HQ (dev)`.
+- **Updates** (`electron/updater.mjs`, packaged builds only, 15 s after start then every 6 h): Windows and macOS builds
+  with a Developer ID signature (`codesign -dv` shows a `TeamIdentifier`, not ad-hoc) use `electron-updater` (download
+  in the background, `ready` → restart). Otherwise the app reads `GET /repos/<owner>/<repo>/releases/latest` (repository from
+  `package.json`) and reports `available` with the release URL when the tag is newer.
+- **`--smoke-test`**: temp `userData`, server on a random port, `/api/health` must answer `app: 'project-hq'`; when
+  `dist/` exists a hidden sandboxed window must load and see `window.hq.version`, with no Node globals. Exit 0 / 1.
+- **Packaging** (`electron-builder.yml`): files `package.json`, `dist/`, `server/`, `electron/`, `content/` in `app.asar`
+  (the demo copy uses plain read/write calls so it works from the archive); only `dependencies` (`electron-updater`) ship.
+  macOS dmg + zip (arm64, x64), Windows nsis (x64, per user). Signing / notarization only via env vars. Release CI:
+  `.github/workflows/desktop-release.yml` (tag `v*` → draft release).
 
 ## External panels are launch cards, never iframes
 
