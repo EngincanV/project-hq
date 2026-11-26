@@ -14,7 +14,7 @@ const DIST = path.join(PROJECT_DIR, 'dist');
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: npm start [-- --open]\n\n  --open   open the app in the default browser\n\nEnv / .env.local: HQ_ROOT, HQ_CONTENT_DIR, PORT');
+  console.log('Usage: npm start [-- --open]\n\n  --open   open the app in the default browser\n\nEnv / .env.local: HQ_ROOT, HQ_CONTENT_DIR, PORT, HQ_WATCH_INTERVAL_MS (see .env.example)');
   process.exit(0);
 }
 
@@ -27,7 +27,7 @@ if (!existsSync(path.join(DIST, 'index.html'))) {
 
 const root = config.demo ? prepareDemoRoot({ projectDir: PROJECT_DIR, contentDir: config.contentDir }) : config.root;
 const serveStatic = createStaticHandler(DIST);
-const api = createApiHandler({ root, contentDir: config.contentDir, demo: config.demo });
+const api = createApiHandler({ root, contentDir: config.contentDir, demo: config.demo, watchIntervalMs: config.watchIntervalMs });
 const server = http.createServer((req, res) => {
   api(req, res, () => {
     serveStatic(req, res).catch(() => {

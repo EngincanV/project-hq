@@ -384,6 +384,45 @@ describe('discard with names git would read as patterns (finding 3)', () => {
   });
 });
 
+describe('outside changes (/api/stamp)', () => {
+  beforeEach(() => start());
+
+  const stamp = async () => (await (await api('/api/stamp')).json()).stamp;
+
+  it('changes when another tool writes, edits or deletes a file, and on a new commit', async () => {
+    const s0 = await stamp();
+    expect(await stamp()).toBe(s0);
+    fs.mkdirSync(path.join(root, 'content', 'projects', 'x'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'content', 'projects', 'x', 'roadmap.md'), '# Roadmap\n');
+    const s1 = await stamp();
+    expect(s1).not.toBe(s0);
+    fs.writeFileSync(path.join(root, 'content', 'projects', 'x', 'roadmap.md'), '# Roadmap\n\n## Now\n');
+    const s2 = await stamp();
+    expect(s2).not.toBe(s1);
+    git('add', '-A');
+    git('commit', '-q', '-m', 'agent commit');
+    const s3 = await stamp();
+    expect(s3).not.toBe(s2);
+    fs.rmSync(path.join(root, 'content', 'projects', 'x', 'roadmap.md'));
+    expect(await stamp()).not.toBe(s3);
+  });
+
+  it('ignores dot-files and only answers GET', async () => {
+    const s0 = await stamp();
+    fs.writeFileSync(path.join(root, 'content', '.DS_Store'), 'x');
+    expect(await stamp()).toBe(s0);
+    expect((await api('/api/stamp', { method: 'POST' })).status).toBe(405);
+  });
+
+  it('reports the poll interval in health', async () => {
+    await new Promise((resolve) => server.close(resolve));
+    server = http.createServer(createApiHandler({ root, contentDir: 'content', watchIntervalMs: 1500 }));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    base = `http://127.0.0.1:${server.address().port}`;
+    expect(await (await api('/api/health')).json()).toMatchObject({ watchIntervalMs: 1500 });
+  });
+});
+
 describe('normalizeGitHubUrl', () => {
   it.each([
     ['https://github.com/owner/repo.git', 'https://github.com/owner/repo'],

@@ -11,6 +11,7 @@ export interface StorageInfo {
   reason?: string;          // why canPublish is false (English, or already in the UI language)
   reasonCode?: string;      // local API: stable code for `reason` (see serverMessages.ts)
   demo?: boolean;           // local API serves the bundled demo content (no HQ_ROOT configured)
+  watchIntervalMs?: number; // local API: how often to look for changes made outside the app (0/absent = never)
 }
 
 export interface PublishResult {
@@ -36,4 +37,10 @@ export interface Storage {
   publish(message: string, opts?: { force?: boolean }): Promise<PublishResult>;
   pull(): Promise<{ updated: number }>;                 // refresh from the remote
   subscribe(listener: () => void): () => void;          // called after any mutation / pull / publish
+  /**
+   * Optional (local mode): checks whether the content changed outside the app (an editor, a coding agent such as
+   * Claude Code, a manual `git pull`) since the last check, and notifies subscribers when it did. The first call
+   * only records the starting point. Resolves true when subscribers were notified.
+   */
+  checkOutsideChanges?(): Promise<boolean>;
 }

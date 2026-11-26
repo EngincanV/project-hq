@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 export const PROJECT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const DEFAULT_PORT = 4173;
+/** How often (ms) the UI checks the content folder for changes made by other tools; 0 turns it off. */
+export const DEFAULT_WATCH_INTERVAL_MS = 3000;
 
 /**
  * Parse `KEY=VALUE` lines. Blank lines and lines starting with `#` are ignored;
@@ -46,7 +48,7 @@ function readEnvLocal(dir) {
  * `demo` is true when no content location is configured (no `HQ_ROOT` in the environment or in
  * `.env.local`): the server then shows a throw-away copy of the bundled demo content (see demo.mjs).
  * @param {{ env?: NodeJS.ProcessEnv, projectDir?: string }} [options]
- * @returns {{ root: string, contentDir: string, port: number, demo: boolean }}
+ * @returns {{ root: string, contentDir: string, port: number, demo: boolean, watchIntervalMs: number }}
  */
 export function loadServerConfig({ env = process.env, projectDir = PROJECT_DIR } = {}) {
   const file = readEnvLocal(projectDir);
@@ -56,5 +58,8 @@ export function loadServerConfig({ env = process.env, projectDir = PROJECT_DIR }
   const root = path.resolve(projectDir, configuredRoot ?? '.');
   const contentDir = pick('HQ_CONTENT_DIR') ?? 'content';
   const port = Number(pick('PORT')) || DEFAULT_PORT;
-  return { root, contentDir, port, demo: configuredRoot === undefined };
+  const watchRaw = pick('HQ_WATCH_INTERVAL_MS');
+  const watchParsed = watchRaw === undefined ? NaN : Number(watchRaw);
+  const watchIntervalMs = Number.isFinite(watchParsed) && watchParsed >= 0 ? Math.round(watchParsed) : DEFAULT_WATCH_INTERVAL_MS;
+  return { root, contentDir, port, demo: configuredRoot === undefined, watchIntervalMs };
 }

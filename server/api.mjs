@@ -1,5 +1,6 @@
 // Project HQ local API. Plain Node, zero runtime dependencies.
 // createApiHandler({ root, contentDir }) → connect-style (req, res, next) middleware for /api/*.
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { git, gitOk, normalizeGitHubUrl, parsePorcelainZ, entriesToChanges } from './git.mjs';
@@ -186,10 +187,11 @@ async function readJson(req) {
 
 /**
  * `demo`: the root is a throw-away copy of the demo content; editing works, publishing is refused.
- * @param {{ root: string, contentDir?: string, demo?: boolean }} options
+ * `watchIntervalMs`: how often the UI should poll `/api/stamp` for changes made outside the app (0 = never).
+ * @param {{ root: string, contentDir?: string, demo?: boolean, watchIntervalMs?: number }} options
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, next?: (err?: unknown) => void) => void}
  */
-export function createApiHandler({ root, contentDir = 'content', demo = false }) {
+export function createApiHandler({ root, contentDir = 'content', demo = false, watchIntervalMs = 0 }) {
   const rootAbs = path.resolve(root);
   const contentAbs = path.resolve(rootAbs, contentDir);
   if (contentAbs !== rootAbs && !contentAbs.startsWith(rootAbs + path.sep)) {
@@ -266,6 +268,23 @@ export function createApiHandler({ root, contentDir = 'content', demo = false })
     return out.sort();
   }
 
+  /**
+   * A fingerprint of the content folder (every file's path, size and mtime) plus the git HEAD. It changes when
+   * anything edits the folder, including tools other than this app (an editor, a coding agent, `git pull`).
+   */
+  async function stamp() {
+    const real = await realContent();
+    const files = await listFiles('');
+    const hash = createHash('sha1');
+    const stats = await Promise.all(
+      files.map((rel) => fs.stat(path.join(real, ...rel.split('/'))).then((st) => `${st.size}:${st.mtimeMs}`, () => '-')),
+    );
+    files.forEach((rel, i) => hash.update(`${rel}\0${stats[i]}\n`));
+    const head = await git(rootAbs, ['rev-parse', '--verify', '--quiet', 'HEAD']);
+    hash.update(`HEAD ${head.code === 0 ? head.stdout.trim() : ''}`);
+    return hash.digest('hex');
+  }
+
   async function removeEmptyParents(absFile) {
     const real = await realContent();
     let dir = path.dirname(absFile);
@@ -321,12 +340,12 @@ export function createApiHandler({ root, contentDir = 'content', demo = false })
 
   async function health() {
     if (demo) {
-      return { app: 'project-hq', mode: 'local', demo: true, label: 'demo', canPublish: false, reason: DEMO_REASON, reasonCode: CODES.demo };
+      return { app: 'project-hq', mode: 'local', demo: true, label: 'demo', canPublish: false, reason: DEMO_REASON, reasonCode: CODES.demo, watchIntervalMs };
     }
     const state = await repoState();
     const base = path.basename(rootAbs);
     if (!state.isRepo) {
-      return { app: 'project-hq', mode: 'local', label: base, canPublish: false, reason: state.reason, reasonCode: state.reasonCode };
+      return { app: 'project-hq', mode: 'local', label: base, canPublish: false, reason: state.reason, reasonCode: state.reasonCode, watchIntervalMs };
     }
     return {
       app: 'project-hq',
@@ -334,6 +353,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false })
       label: `${base} · ${state.branch}`,
       canPublish: true,
       remoteUrl: state.remoteUrl,
+      watchIntervalMs,
       ...(state.remote ? {} : { reason: 'No git remote: publishing commits locally only', reasonCode: CODES.noRemote }),
     };
   }
@@ -449,6 +469,9 @@ export function createApiHandler({ root, contentDir = 'content', demo = false })
       case '/api/health':
         only('GET');
         return send(res, 200, await health());
+      case '/api/stamp':
+        only('GET');
+        return send(res, 200, { stamp: await stamp() });
       case '/api/files': {
         only('GET');
         const prefix = cleanRelPath(url.searchParams.get('prefix') ?? '', { allowEmpty: true });

@@ -28,13 +28,13 @@ export function projectHqApi() {
   // Created on first use, so `vite build` never prepares a demo copy.
   const getHandler = () => {
     if (handler) return handler;
-    const { root, contentDir, demo } = loadServerConfig();
+    const { root, contentDir, demo, watchIntervalMs } = loadServerConfig();
     const actualRoot = demo ? prepareDemoRoot({ projectDir: PROJECT_DIR, contentDir }) : root;
     if (demo) console.log('\n  Project HQ: showing the demo content. Run `npm run setup` to use your own.\n');
     const actualContent = path.resolve(actualRoot, contentDir);
     if (!isInside(actualContent, PROJECT_DIR)) contentDirs.push(...contentDirVariants(actualContent));
     else console.warn('\n  Project HQ: the content folder contains the app itself, so the dev server cannot hide it.\n');
-    handler = createApiHandler({ root: actualRoot, contentDir, demo });
+    handler = createApiHandler({ root: actualRoot, contentDir, demo, watchIntervalMs });
     return handler;
   };
   /** @param {{ config: import('vite').ResolvedConfig, middlewares: import('vite').Connect.Server }} server */

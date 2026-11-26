@@ -5,6 +5,7 @@ import type { Change, PublishResult, Storage, StorageInfo } from './types';
 
 export class LocalStorage implements Storage {
   private readonly listeners = new Listeners();
+  private lastStamp: string | undefined;
 
   /** @param baseUrl where the API lives, relative to the page (default `./api`). */
   constructor(private readonly baseUrl = './api') {}
@@ -70,6 +71,15 @@ export class LocalStorage implements Storage {
     const result = await this.json<{ updated: number }>('POST', '/pull', {});
     this.listeners.emit();
     return result;
+  }
+
+  async checkOutsideChanges(): Promise<boolean> {
+    const { stamp } = await this.json<{ stamp: string }>('GET', '/stamp');
+    const previous = this.lastStamp;
+    this.lastStamp = stamp;
+    if (previous === undefined || previous === stamp) return false;
+    this.listeners.emit();
+    return true;
   }
 
   subscribe(listener: () => void): () => void {

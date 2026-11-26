@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { getStorageSetup, onStorageReset, type StorageMode, type StorageSetup } from './detect';
 import type { Storage, StorageInfo } from './types';
+import { useOutsideChanges } from './useOutsideChanges';
 
 const StorageContext = createContext<StorageSetup | null>(null);
 
@@ -36,7 +37,20 @@ export function StorageProvider({ children, storage, mode = 'local', fallback = 
 
   const value = storage ? { storage, mode, needsSetup: false } : detected;
   if (!value) return <>{fallback}</>;
-  return <StorageContext.Provider value={value}>{children}</StorageContext.Provider>;
+  return (
+    <StorageContext.Provider value={value}>
+      <OutsideChangesWatcher />
+      {children}
+    </StorageContext.Provider>
+  );
+}
+
+/** Re-reads the UI when the content folder is changed by another tool (local mode; see useOutsideChanges). */
+function OutsideChangesWatcher() {
+  const storage = useStorage();
+  const info = useStorageInfo();
+  useOutsideChanges(storage, info?.watchIntervalMs);
+  return null;
 }
 
 /** Full setup: `{ storage, mode, needsSetup }`. */
