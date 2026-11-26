@@ -29,6 +29,9 @@ files:
 
 asar: true
 
+# No spaces in file names: GitHub renames them in release assets, which would break the update metadata.
+artifactName: Project-HQ-${version}-${os}-${arch}.${ext}
+
 mac:
   category: public.app-category.developer-tools
   icon: build/icon.png
@@ -40,9 +43,6 @@ mac:
     - target: zip
       arch: [arm64, x64]
 
-dmg:
-  artifactName: ${productName}-${version}-mac-${arch}.${ext}
-
 win:
   icon: build/icon.ico
   target:
@@ -52,7 +52,7 @@ win:
 nsis:
   oneClick: true
   perMachine: false
-  artifactName: ${productName}-Setup-${version}.${ext}
+  artifactName: Project-HQ-Setup-${version}.${ext}
   shortcutName: Project HQ
 
 # Update metadata (latest.yml, latest-mac.yml) points at GitHub Releases. CI uploads to a draft release; the
