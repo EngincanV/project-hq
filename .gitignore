@@ -6,3 +6,29 @@ dev-dist
 .env.local
 .playwright-mcp
 .hallmark
+
+# Environment files (keep the documented example tracked)
+.env
+.env.*
+!.env.example
+
+# Keys, certificates, signing material
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+
+# Cloud / Firebase / service-account credentials
+service-account*.json
+credentials*.json
+google-services.json
+GoogleService-Info.plist
+
+# Test output and logs
+coverage
+*.log
+npm-debug.log*
