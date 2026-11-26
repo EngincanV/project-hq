@@ -189,3 +189,14 @@
     margin-left: 0;
   }
 }
+
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-width: 0;
+}
+
+.pathRow code {
+  overflow-wrap: anywhere;
+}

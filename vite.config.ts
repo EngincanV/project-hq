@@ -44,7 +44,7 @@ function pwa() {
       start_url: './',
       scope: './',
       display: 'standalone',
-      lang: 'tr',
+      lang: 'en',
       theme_color: '#ffffff', // --color-bg (light)
       background_color: '#ffffff',
       icons: [

@@ -1,6 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import { useLang, useMessages } from '../../i18n';
 import { serverText, useStorageInfo } from '../../storage';
+import { CopyButton } from '../project-shared/CopyButton';
 import { settingsMessages } from './messages';
 import styles from './SettingsPage.module.css';
 
@@ -16,6 +17,15 @@ export function LocalRepoInfo() {
         <dl className={styles.facts}>
           <dt>{t.localLabel}</dt>
           <dd>{info.demo ? t.localDemoLabel : info.label}</dd>
+          {info.contentPath && !info.demo && (
+            <>
+              <dt>{t.localPath}</dt>
+              <dd className={styles.pathRow}>
+                <code>{info.contentPath}</code>
+                <CopyButton value={info.contentPath} what={t.localPathWhat} />
+              </dd>
+            </>
+          )}
           <dt>{t.localRemote}</dt>
           <dd>
             {info.remoteUrl ? (

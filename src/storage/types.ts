@@ -11,6 +11,7 @@ export interface StorageInfo {
   reason?: string;          // why canPublish is false (English, or already in the UI language)
   reasonCode?: string;      // local API: stable code for `reason` (see serverMessages.ts)
   demo?: boolean;           // local API serves the bundled demo content (no HQ_ROOT configured)
+  contentPath?: string;     // local API (not demo): absolute path of the content folder on this computer
   watchIntervalMs?: number; // local API: how often to look for changes made outside the app (0/absent = never)
 }
 

@@ -345,7 +345,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     const state = await repoState();
     const base = path.basename(rootAbs);
     if (!state.isRepo) {
-      return { app: 'project-hq', mode: 'local', label: base, canPublish: false, reason: state.reason, reasonCode: state.reasonCode, watchIntervalMs };
+      return { app: 'project-hq', mode: 'local', label: base, canPublish: false, reason: state.reason, reasonCode: state.reasonCode, contentPath: contentAbs, watchIntervalMs };
     }
     return {
       app: 'project-hq',
@@ -353,6 +353,7 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
       label: `${base} · ${state.branch}`,
       canPublish: true,
       remoteUrl: state.remoteUrl,
+      contentPath: contentAbs,
       watchIntervalMs,
       ...(state.remote ? {} : { reason: 'No git remote: publishing commits locally only', reasonCode: CODES.noRemote }),
     };
