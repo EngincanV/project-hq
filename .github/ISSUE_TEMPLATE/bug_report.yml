@@ -1,0 +1,63 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please do not report security problems here; use
+        private vulnerability reporting instead (see SECURITY.md). Do not paste tokens or private content.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The Project HQ version (Settings > Desktop app in the desktop app, or `version` in package.json) or the commit you run from source.
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: variant
+    attributes:
+      label: Web or desktop
+      options:
+        - Desktop app
+        - From source in the browser (npm start / npm run dev)
+        - PWA / GitHub mode (static hosting)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and browser
+      description: For example macOS 15 (Apple silicon), Windows 11, or Android with Chrome.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Include error messages or screenshots if you have them.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Terminal output of `npm start` or the desktop app, if relevant.
+      render: text
