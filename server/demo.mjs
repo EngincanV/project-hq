@@ -71,6 +71,20 @@ export function shiftPlanFiles(files, days) {
 }
 
 /**
+ * Recursive copy with plain read/write calls. Unlike `fs.cpSync`, it also works when the demo content is packed
+ * inside the desktop app's `app.asar` archive (Electron patches these calls, not `cp`).
+ */
+function copyDir(from, to) {
+  fs.mkdirSync(to, { recursive: true });
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    const src = path.join(from, entry.name);
+    const dest = path.join(to, entry.name);
+    if (entry.isDirectory()) copyDir(src, dest);
+    else if (entry.isFile()) fs.writeFileSync(dest, fs.readFileSync(src));
+  }
+}
+
+/**
  * Copy `<projectDir>/<contentDir>` into a fresh temp folder (a git repo with one commit, when git is
  * available), shift the demo plan to today and return the folder. The folder is removed on exit.
  * @param {{ projectDir: string, contentDir?: string, today?: Date }} options
@@ -80,7 +94,7 @@ export function prepareDemoRoot({ projectDir, contentDir = 'content', today = ne
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'project-hq-demo-'));
   const target = path.join(root, contentDir);
   const source = path.join(projectDir, contentDir);
-  if (fs.existsSync(source)) fs.cpSync(source, target, { recursive: true });
+  if (fs.existsSync(source)) copyDir(source, target);
   else fs.mkdirSync(target, { recursive: true });
 
   const planDir = path.join(target, 'plan');
