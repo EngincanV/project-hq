@@ -27,6 +27,9 @@ Usage: npm run setup [-- options]
   --here             keep content inside this app repo (HQ_ROOT=.), for a private fork
   --with-examples    copy the demo projects into the new content folder
   --no-examples      do not copy them (default)
+  --claude-md        add a CLAUDE.md to the content repo that teaches Claude Code (and other
+                     coding agents) the content formats (default when not asked: yes)
+  --no-claude-md     do not add it
   --remote <url>     add this URL as the "origin" git remote of the content repo
   -y, --yes          do not ask; use the flags above and defaults for the rest
   -h, --help         show this help
@@ -110,6 +113,18 @@ async function main() {
         fs.cpSync(path.join(source, name), to, { recursive: true });
         console.log(`  copied projects/${name}`);
       }
+    }
+  }
+
+  // 3b. CLAUDE.md for coding agents (only into a separate content repo; never overwrites)
+  if (!inApp) {
+    const target = path.join(root, 'CLAUDE.md');
+    if (fs.existsSync(target)) {
+      console.log('✓ CLAUDE.md already exists (left unchanged)');
+    } else if (opts.claudeMd ?? (await yesNo('Add a CLAUDE.md that teaches Claude Code the content formats?', true))) {
+      fs.copyFileSync(path.join(projectDir, 'templates', 'content-repo', 'CLAUDE.md'), target);
+      console.log(`✓ Added ${target}`);
+      console.log('  (it is outside the content folder, so Publish does not commit it: commit it once yourself)');
     }
   }
 

@@ -9,7 +9,7 @@ export const DEFAULT_FOLDER_NAME = 'project-hq-content';
  * @param {string[]} argv
  */
 export function parseArgs(argv) {
-  /** @type {{ dir?: string, here: boolean, withExamples?: boolean, remote?: string, yes: boolean, help: boolean, unknown: string[] }} */
+  /** @type {{ dir?: string, here: boolean, withExamples?: boolean, claudeMd?: boolean, remote?: string, yes: boolean, help: boolean, unknown: string[] }} */
   const out = { here: false, yes: false, help: false, unknown: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -27,6 +27,12 @@ export function parseArgs(argv) {
         break;
       case '--no-examples':
         out.withExamples = false;
+        break;
+      case '--claude-md':
+        out.claudeMd = true;
+        break;
+      case '--no-claude-md':
+        out.claudeMd = false;
         break;
       case '--remote':
         out.remote = value();

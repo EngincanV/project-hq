@@ -17,6 +17,9 @@ describe('parseArgs', () => {
     });
     expect(parseArgs(['--here', '--no-examples', '--help'])).toMatchObject({ here: true, withExamples: false, help: true });
     expect(parseArgs(['--nope']).unknown).toEqual(['--nope']);
+    expect(parseArgs(['--claude-md']).claudeMd).toBe(true);
+    expect(parseArgs(['--no-claude-md']).claudeMd).toBe(false);
+    expect(parseArgs([]).claudeMd).toBeUndefined();
   });
 });
 
