@@ -44,7 +44,6 @@ export function LocalRepoInfo() {
       ) : (
         <p className={styles.note}>{t.loading}</p>
       )}
-      <p className={styles.note}>{t.localOtherRepo}</p>
     </>
   );
 }
