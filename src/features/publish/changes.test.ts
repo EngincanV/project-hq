@@ -1,4 +1,4 @@
-import { describePath, friendlyPath, generateMessage, groupChanges, shortSha } from './changes';
+import { describePath, editorRoute, friendlyPath, generateMessage, groupChanges, shortSha } from './changes';
 import { publishMessages } from './messages';
 import type { Change } from '../../storage';
 
@@ -118,5 +118,20 @@ describe('shortSha', () => {
   it('shortens real shas only', () => {
     expect(shortSha('0123456789abcdef')).toBe('0123456');
     expect(shortSha('memory-1')).toBe('memory-1');
+  });
+});
+
+describe('editorRoute', () => {
+  it('links files the app edits as plain Markdown', () => {
+    expect(editorRoute('projects/kp/notes/My idea.md')).toBe('/p/kp/notes/My%20idea');
+    expect(editorRoute('projects/kp/stores/ios.md')).toBe('/p/kp/stores');
+    expect(editorRoute('projects/kp/ads/admob.md')).toBe('/p/kp/ads');
+  });
+
+  it('has no link for files shown in another form', () => {
+    expect(editorRoute('projects/kp/roadmap.md')).toBeUndefined();
+    expect(editorRoute('projects/kp/project.json')).toBeUndefined();
+    expect(editorRoute('plan/2026-11.md')).toBeUndefined();
+    expect(editorRoute('projects/kp/notes/sub/x.md')).toBeUndefined();
   });
 });

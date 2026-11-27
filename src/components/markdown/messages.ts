@@ -33,6 +33,14 @@ export const markdownMessages = defineMessages({
     imageBadType: (name: string) => `${name} desteklenen bir görsel değil (PNG, JPEG, GIF, WebP, AVIF, SVG).`,
     imageFailed: (name: string, error: string) => `${name} yüklenemedi: ${error}`,
     imageMissing: (path: string) => `Görsel bulunamadı: ${path}`,
+    conflictStatus: 'Kaydedilmedi: dosya dışarıdan değişti',
+    conflictTitle: 'Bu dosya dışarıdan değiştirildi',
+    conflictText:
+      'Sen yazarken dosya başka bir yerde (ör. Claude Code ya da başka bir bilgisayardan gelen bir değişiklikle) değişti. Kaydedilmemiş değişikliklerin bekletiliyor; hangisini tutmak istersin?',
+    conflictMine: 'Benimkini kullan',
+    conflictDisk: 'Diskteki sürümü yükle',
+    conflictCancel: 'İptal',
+    conflictDiskFailed: (error: string) => `Diskteki sürüm yüklenemedi: ${error}`,
   },
   en: {
     editorLabel: 'Markdown content',
@@ -66,5 +74,13 @@ export const markdownMessages = defineMessages({
     imageBadType: (name: string) => `${name} is not a supported image (PNG, JPEG, GIF, WebP, AVIF, SVG).`,
     imageFailed: (name: string, error: string) => `Could not upload ${name}: ${error}`,
     imageMissing: (path: string) => `Image not found: ${path}`,
+    conflictStatus: 'Not saved: the file changed outside the app',
+    conflictTitle: 'This file was changed outside the app',
+    conflictText:
+      'While you were typing, the file changed elsewhere (e.g. through Claude Code or a change from another computer). Your unsaved changes are on hold; which version do you want to keep?',
+    conflictMine: 'Use mine',
+    conflictDisk: 'Load the version on disk',
+    conflictCancel: 'Cancel',
+    conflictDiskFailed: (error: string) => `Could not load the version on disk: ${error}`,
   },
 });

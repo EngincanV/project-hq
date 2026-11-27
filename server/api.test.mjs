@@ -315,12 +315,16 @@ describe('local API', () => {
     fs.rmSync(remote, { recursive: true, force: true });
   });
 
-  it('reports a push that was attempted and failed as an error', async () => {
+  it('reports an unreachable remote as an error and leaves the changes unpublished', async () => {
     git('remote', 'add', 'origin', path.join(os.tmpdir(), `hq-missing-remote-${process.pid}-${Date.now()}`));
     await put('a.md', 'a');
     const result = await (await post('/api/publish', { message: 'push me' })).json();
-    expect(result).toMatchObject({ ok: true, pushed: false, error: expect.any(String) });
-    expect(result.commitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(result).toMatchObject({ ok: false, pushed: false, code: 'fetch_failed', error: expect.any(String) });
+    expect(result.detail).toBeTruthy();
+    // The commit made for the publish is undone (files untouched), so the change can be published again later.
+    expect(git('rev-list', '--all').trim()).toBe('');
+    expect((await (await api('/api/changes')).json()).changes).toEqual([{ path: 'a.md', kind: 'added' }]);
+    expect(fs.readFileSync(path.join(root, 'content/a.md'), 'utf8')).toBe('a');
   });
 
   it('discards selected paths and everything', async () => {

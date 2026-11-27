@@ -71,8 +71,75 @@ describe('MarkdownDoc', () => {
     type(view, '!');
     await act(() => storage.writeText(PATH, 'Clobber'));
     expect(view.state.doc.toString()).toBe('Hello from elsewhere!');
-    await act(() => flushAll());
-    expect(await storage.readText(PATH)).toBe('Hello from elsewhere!');
+  });
+
+  describe('when the file changes on disk while typing is unsaved', () => {
+    // Claude Code (or a pull) rewrites the file while the user's typing waits for its autosave.
+    async function conflicted() {
+      const ctx = setup();
+      const view = await getView(ctx.container);
+      type(view, '!');
+      await act(() => ctx.storage.writeText(PATH, 'Changed by Claude Code'));
+      let held: string[] = [];
+      await act(async () => {
+        held = await flushAll();
+      });
+      return { ...ctx, view, held };
+    }
+
+    it('does not overwrite the file, warns and makes publishing stop', async () => {
+      const { storage, view, held } = await conflicted();
+      expect(held).toEqual([PATH]);
+      expect(await storage.readText(PATH)).toBe('Changed by Claude Code');
+      expect(view.state.doc.toString()).toBe('Hello!');
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('This file was changed outside the app');
+      expect(screen.getByText('Not saved: the file changed outside the app')).toBeInTheDocument();
+      // Further typing stays held back too.
+      type(view, '?');
+      await act(async () => {
+        expect(await flushAll()).toEqual([PATH]);
+      });
+      expect(await storage.readText(PATH)).toBe('Changed by Claude Code');
+    });
+
+    it('"Use mine" writes the editor text over the disk version', async () => {
+      const { storage } = await conflicted();
+      fireEvent.click(await screen.findByRole('button', { name: 'Use mine' }));
+      await waitFor(async () => expect(await storage.readText(PATH)).toBe('Hello!'));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await act(async () => {
+        expect(await flushAll()).toEqual([]);
+      });
+    });
+
+    it('"Load the version on disk" drops the unsaved typing and shows the file', async () => {
+      const { storage, view } = await conflicted();
+      fireEvent.click(await screen.findByRole('button', { name: 'Load the version on disk' }));
+      await waitFor(() => expect(view.state.doc.toString()).toBe('Changed by Claude Code'));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await act(async () => {
+        expect(await flushAll()).toEqual([]);
+      });
+      expect(await storage.readText(PATH)).toBe('Changed by Claude Code');
+    });
+
+    it('"Cancel" closes the question but still writes nothing; leaving keeps the text in a side file', async () => {
+      const { storage, unmount } = await conflicted();
+      fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await act(async () => {
+        expect(await flushAll()).toEqual([PATH]);
+      });
+      expect(await storage.readText(PATH)).toBe('Changed by Claude Code');
+      unmount();
+      await waitFor(async () => {
+        const aside = (await storage.list('projects/a/notes')).find((p) => p.includes('.unsaved-'));
+        expect(aside).toMatch(/^projects\/a\/notes\/n\.unsaved-\d{4}-\d{2}-\d{2}-\d{6}\.md$/);
+        expect(await storage.readText(aside!)).toBe('Hello!');
+      });
+      expect(await storage.readText(PATH)).toBe('Changed by Claude Code');
+    });
   });
 
   it('flushes pending edits on unmount', async () => {

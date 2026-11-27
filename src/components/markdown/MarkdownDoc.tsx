@@ -4,7 +4,8 @@ import { Columns2, Eye, PenLine } from 'lucide-react';
 import { useTheme } from '../../app/theme';
 import { useTextFile } from '../../data';
 import { useMessages } from '../../i18n';
-import { cx, Spinner } from '../../ui';
+import { useStorage } from '../../storage';
+import { Button, cx, Spinner } from '../../ui';
 import { runFormat, type FormatAction } from './editor/commands';
 import { createEditor, type EditorHandlers, type MarkdownEditor } from './editor/createEditor';
 import { markdownMessages } from './messages';
@@ -33,7 +34,19 @@ export interface MarkdownDocProps {
   autoFocus?: boolean;
 }
 
-const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp,image/avif,image/svg+xml,.avif';
+/**
+ * Where an edit goes when the editor closes while it is held back by an outside change:
+ * `notes/plan.md` → `notes/plan.unsaved-2026-11-27-1840.md` (it then shows up as an unpublished change).
+ */
+export function asidePath(path: string, now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const dot = path.lastIndexOf('.');
+  const slash = path.lastIndexOf('/');
+  return dot > slash + 1 ? `${path.slice(0, dot)}.unsaved-${stamp}${path.slice(dot)}` : `${path}.unsaved-${stamp}`;
+}
+
+const ACCEPT ='image/png,image/jpeg,image/gif,image/webp,image/avif,image/svg+xml,.avif';
 const VIEW_ICONS: Record<ViewMode, typeof PenLine> = { write: PenLine, split: Columns2, preview: Eye };
 
 /** Edits one markdown file and saves it automatically. */
@@ -44,8 +57,13 @@ export function MarkdownDoc(props: MarkdownDocProps) {
 
 function MarkdownDocEditor({ path, placeholder, minHeight = 240, className, assetsDir, autoFocus }: MarkdownDocProps) {
   const t = useMessages(markdownMessages);
+  const storage = useStorage();
   const file = useTextFile(path);
-  const autosave = useAutosave(file.save);
+  const { save } = file;
+  const autosave = useAutosave(
+    useCallback((text: string, expected: string | null) => save(text, expected === null ? undefined : { expected }), [save]),
+    { path, saveAside: (text) => storage.writeText(asidePath(path), text) },
+  );
   const { resolved: theme } = useTheme();
   const { mode, modes, setMode } = useViewMode();
   const [text, setText] = useState<string | null>(null);
@@ -132,16 +150,31 @@ function MarkdownDocEditor({ path, placeholder, minHeight = 240, className, asse
     if (view && files.length > 0) void upload(view, files, view.state.selection.main.head);
   };
 
+  // The file changed outside the app while typing was pending: the user picks a side (see useAutosave).
+  const loadDisk = async () => {
+    try {
+      const disk = (await storage.readText(path)) ?? '';
+      autosave.dropPending();
+      lastSaved.current = disk;
+      editor.current?.replaceFromStorage(disk);
+      setText(disk);
+    } catch (err) {
+      setInlineError(t.conflictDiskFailed(err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   const status = file.error
     ? t.loadFailed(file.error.message)
     : autosave.status === 'error'
       ? t.saveFailed(autosave.error)
-      : autosave.status === 'saving'
-        ? t.saving
-        : autosave.status === 'saved'
-          ? t.saved
-          : '';
-  const isError = !!file.error || autosave.status === 'error';
+      : autosave.status === 'conflict'
+        ? t.conflictStatus
+        : autosave.status === 'saving'
+          ? t.saving
+          : autosave.status === 'saved'
+            ? t.saved
+            : '';
+  const isError = !!file.error || autosave.status === 'error' || autosave.status === 'conflict';
 
   return (
     <div className={cx(styles.doc, className)}>
@@ -174,6 +207,24 @@ function MarkdownDocEditor({ path, placeholder, minHeight = 240, className, asse
           </div>
         </div>
       </div>
+
+      {autosave.conflict === 'open' && (
+        <div className={styles.conflict} role="alert">
+          <p className={styles.conflictTitle}>{t.conflictTitle}</p>
+          <p className={styles.conflictText}>{t.conflictText}</p>
+          <div className={styles.conflictActions}>
+            <Button size="sm" variant="primary" onClick={() => void autosave.keepMine()}>
+              {t.conflictMine}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => void loadDisk()}>
+              {t.conflictDisk}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={autosave.dismissConflict}>
+              {t.conflictCancel}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {inlineError && (
         <p className={cx(styles.status, styles.error)} role="alert">

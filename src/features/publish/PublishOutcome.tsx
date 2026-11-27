@@ -7,10 +7,12 @@ import { shortSha } from './changes';
 import { publishMessages } from './messages';
 import styles from './Publish.module.css';
 
-export type OutcomeKind = 'success' | 'notPushed' | 'nothing' | 'conflict' | 'error';
+export type OutcomeKind = 'success' | 'notPushed' | 'nothing' | 'conflict' | 'syncConflict' | 'error';
 
 /** Which of the result screens a publish result needs. */
 export function outcomeKind(result: PublishResult): OutcomeKind {
+  // Local mode: the rebase onto the remote conflicted and was undone; the user picks a side per file.
+  if (result.code === 'rebase_conflict' && result.conflicts?.length) return 'syncConflict';
   if (result.conflicts?.length) return 'conflict';
   if (!result.ok) return 'error';
   if (!result.commitSha) return 'nothing';
@@ -33,11 +35,31 @@ export function PublishOutcome({ result, describe, fallbackReason }: PublishOutc
   const message = serverText(result.code, result.message, lang);
   const error = serverText(result.code, result.error, lang);
   const sha = result.commitSha ? shortSha(result.commitSha) : '';
+  // git's own output and the files a refusal is about, below the translated text.
+  const extra = (
+    <>
+      {result.files && result.files.length > 0 && (
+        <>
+          <p className={styles.detail}>{t.filesLabel}</p>
+          <ul className={styles.conflicts}>
+            {result.files.map((path) => (
+              <li key={path} title={path}>
+                {describe(path)}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {result.detail && <pre className={styles.gitOutput}>{result.detail}</pre>}
+    </>
+  );
   switch (outcomeKind(result)) {
     case 'success':
       return (
         <Notice tone="success" icon={<CircleCheck size={20} />} title={t.successTitle}>
           <p>{t.successText(sha)}</p>
+          {!!result.pulled && <p>{t.pulledText(result.pulled)}</p>}
+          {result.retried && <p className={styles.detail}>{t.retriedText}</p>}
           {result.commitUrl && (
             <a className={styles.link} href={result.commitUrl} target="_blank" rel="noreferrer noopener">
               {t.viewOnGitHub} <ExternalLink size={14} aria-hidden="true" />
@@ -51,6 +73,7 @@ export function PublishOutcome({ result, describe, fallbackReason }: PublishOutc
         <Notice tone="warning" icon={<TriangleAlert size={20} />} title={t.pushFailedTitle}>
           <p>{t.notPushedText(sha)}</p>
           <p className={styles.detail}>{error}</p>
+          {extra}
         </Notice>
       ) : (
         <Notice tone="info" icon={<Info size={20} />} title={t.notPushedTitle}>
@@ -64,6 +87,7 @@ export function PublishOutcome({ result, describe, fallbackReason }: PublishOutc
           {message && <p className={styles.detail}>{message}</p>}
         </Notice>
       );
+    case 'syncConflict': // rendered by SyncConflicts in the panel
     case 'conflict':
       return (
         <Notice tone="warning" icon={<TriangleAlert size={20} />} title={t.conflictTitle}>
@@ -81,6 +105,7 @@ export function PublishOutcome({ result, describe, fallbackReason }: PublishOutc
       return (
         <Notice tone="danger" icon={<CircleX size={20} />} title={t.errorTitle}>
           <p className={styles.detail}>{error || t.unknownError}</p>
+          {extra}
         </Notice>
       );
   }

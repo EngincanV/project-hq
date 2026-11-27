@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Publish** (local mode) now syncs safely with the remote: it commits every change in the content folder (also those
+  made by tools such as Claude Code), fetches, rebases onto the upstream and pushes, retrying once when another push
+  got in between. A conflict aborts the rebase without losing or publishing anything, and the panel lets you keep your
+  version, keep the remote one or edit the file by hand. A publish that does not reach the remote leaves the changes
+  unpublished, so it can simply be retried.
+- **Refresh** brings in remote commits with a fast-forward or a rebase of local commits instead of `git pull --ff-only`.
+
+### Added
+
+- The editor no longer overwrites a file that changed on disk while you had unsaved typing; it asks whether to use your
+  version, load the one on disk or cancel.
+- The top bar says when the remote has new commits (background `git fetch` on start and window focus) and offers
+  **Sync now**.
+
 ## [0.2.0] - 2026-11-26
 
 ### Added
