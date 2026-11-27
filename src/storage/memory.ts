@@ -1,7 +1,8 @@
 // In-memory `Storage` for tests and demos. Initial files count as "published"; edits show up in `changes()`
 // until `publish()` (which accepts them) or `discard()` (which reverts them).
+import { FileChangedError } from './errors';
 import { Listeners } from './listeners';
-import type { Change, PublishResult, Storage, StorageInfo } from './types';
+import type { Change, PublishOptions, PublishResult, Storage, StorageInfo, WriteOptions } from './types';
 
 type FileMap = Map<string, Uint8Array>;
 
@@ -57,7 +58,11 @@ export class MemoryStorage implements Storage {
     return bytes ? new Uint8Array(bytes) : null;
   }
 
-  async writeText(path: string, text: string): Promise<void> {
+  async writeText(path: string, text: string, opts: WriteOptions = {}): Promise<void> {
+    if (opts.expected !== undefined) {
+      const current = this.files.get(path);
+      if ((current ? decoder.decode(current) : '') !== opts.expected) throw new FileChangedError(path);
+    }
     this.files.set(path, toBytes(text));
     this.listeners.emit();
   }
@@ -103,7 +108,7 @@ export class MemoryStorage implements Storage {
     this.listeners.emit();
   }
 
-  async publish(_message: string, _opts?: { force?: boolean }): Promise<PublishResult> {
+  async publish(_message: string, _opts?: PublishOptions): Promise<PublishResult> {
     if ((await this.changes()).length === 0) return { ok: true, pushed: false };
     this.published = new Map(this.files);
     this.commits += 1;

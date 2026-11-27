@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { git, gitOk, normalizeGitHubUrl, parsePorcelainZ, entriesToChanges } from './git.mjs';
+import { publishSync, pullSync, remoteStatus, SYNC_CODES, SyncError, writeConflictMarkers } from './sync.mjs';
 
 export const BODY_LIMIT = 25 * 1024 * 1024;
 const JSON_LIMIT = 1024 * 1024;
@@ -48,7 +49,12 @@ export const CODES = /** @type {const} */ ({
   methodNotAllowed: 'method_not_allowed',
   unknownRoute: 'unknown_route',
   serverError: 'server_error',
+  ...SYNC_CODES,
 });
+
+/** Header carrying the SHA-256 (hex) of the file content the client last saw, for `PUT /api/file`. */
+const BASE_HASH_HEADER = 'x-hq-base-hash';
+const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
 const DEMO_REASON = 'Demo content: publishing is turned off. Run `npm run setup` to use your own content folder.';
 
@@ -399,49 +405,43 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     };
   }
 
+  /** What the sync flow (sync.mjs) needs to know about this repository. */
+  async function syncContext(state) {
+    const top = await fs.realpath((await gitOk(rootAbs, ['rev-parse', '--show-toplevel'])).trim());
+    return {
+      root: rootAbs,
+      top,
+      contentSpec,
+      state,
+      toContentRel: (repoRel) => toContentRel(state, repoRel),
+      toRepoRel: (rel) => (state.contentRel ? `${state.contentRel}/${rel}` : rel),
+      entryPath: resolveEntry,
+      redact: redactCredentials,
+    };
+  }
+
+  /** `{ "<content path>": "mine" | "theirs" }` chosen by the user for conflicting files. */
+  function cleanResolutions(raw) {
+    /** @type {Record<string, 'mine' | 'theirs'>} */
+    const out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    for (const [p, v] of Object.entries(raw)) {
+      if ((v === 'mine' || v === 'theirs') && typeof p === 'string' && p.length <= 1024 && !p.includes('\0')) out[p] = v;
+    }
+    return out;
+  }
+
+  /**
+   * Publish = commit every change in the content folder, then fetch, rebase onto the upstream and push
+   * (see sync.mjs). Never force-pushes; a conflict leaves the repository as it was before.
+   */
   async function publish(body) {
     if (demo) return { ok: false, pushed: false, error: DEMO_REASON, code: CODES.demo };
     const state = await repoState();
     if (!state.isRepo) return { ok: false, pushed: false, error: state.reason, code: state.reasonCode };
     const message = typeof body.message === 'string' && body.message.trim() ? body.message.trim().slice(0, 2000) : 'Update content';
-    await gitOk(rootAbs, ['add', '-A', '--', contentSpec]);
-    const diff = await git(rootAbs, ['diff', '--cached', '--quiet', '--', contentSpec]);
-    let committed = false;
-    if (diff.code === 1) {
-      const c = await git(rootAbs, ['commit', '-q', '-m', message, '--', contentSpec]);
-      if (c.code !== 0) return { ok: false, pushed: false, error: redactCredentials((c.stderr || c.stdout).trim()) || 'git commit failed', code: CODES.commitFailed };
-      committed = true;
-    } else if (diff.code !== 0) {
-      return { ok: false, pushed: false, error: redactCredentials(diff.stderr.trim()) || 'git diff failed', code: CODES.diffFailed };
-    }
-    const headR = await git(rootAbs, ['rev-parse', 'HEAD']);
-    const commitSha = headR.code === 0 ? headR.stdout.trim() : undefined;
-    const commitUrl = commitSha && state.remoteUrl ? `${state.remoteUrl}/commit/${commitSha}` : undefined;
-
-    // Something to push? (new commit, or earlier commits a previous push failed to deliver)
-    let ahead = committed;
-    if (!committed && state.remote && commitSha) {
-      // Compare with the upstream, or with the remote-tracking branch of the same name when there is none.
-      const compareRef = state.upstream ?? `refs/remotes/${state.remote}/${state.branch}`;
-      const known = (await git(rootAbs, ['rev-parse', '--verify', '--quiet', compareRef])).code === 0;
-      if (known) {
-        const a = await git(rootAbs, ['rev-list', '--count', `${compareRef}..HEAD`]);
-        ahead = a.code === 0 && Number(a.stdout.trim()) > 0;
-      } else {
-        ahead = true; // the branch was never pushed
-      }
-    }
-    if (!committed && !ahead) {
-      return { ok: true, pushed: false, message: 'Nothing to publish: no changes in the content folder', code: CODES.nothingToPublish };
-    }
-    // `message` is informational; `error` only reports a push that was attempted and failed.
-    const base = { ok: true, commitSha, commitUrl };
-    if (!state.remote) return { ...base, pushed: false, message: 'Committed locally (no git remote configured)', code: CODES.committedLocal };
-    // `--end-of-options` and a full ref: a remote or branch name that starts with `-` is never read as an option.
-    const pushArgs = state.upstream ? ['push'] : ['push', '-u', '--end-of-options', state.remote, `refs/heads/${state.branch}`];
-    const p = await git(rootAbs, pushArgs, { timeout: 120_000 });
-    if (p.code !== 0) return { ...base, pushed: false, error: redactCredentials((p.stderr || p.stdout).trim()) || 'git push failed', code: CODES.pushFailed };
-    return { ...base, pushed: true, ...(committed ? {} : { message: 'No new changes; pushed earlier commits', code: CODES.pushedEarlier }) };
+    const upstream = typeof body.upstream === 'string' && /^[0-9a-f]{40,64}$/.test(body.upstream) ? body.upstream : undefined;
+    return publishSync(await syncContext(state), { message, resolutions: cleanResolutions(body.resolutions), upstream });
   }
 
   async function discard(body) {
@@ -479,16 +479,58 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
     }
   }
 
+  /** Brings in the remote's commits without publishing (fast-forward, or a rebase of local commits). */
   async function pull() {
     const state = await repoState();
     if (!state.isRepo || !state.remote || !state.upstream || !state.hasHead) return { updated: 0 };
-    const before = (await gitOk(rootAbs, ['rev-parse', 'HEAD'])).trim();
-    const r = await git(rootAbs, ['pull', '--ff-only'], { timeout: 120_000 });
-    if (r.code !== 0) throw new HttpError(409, redactCredentials((r.stderr || r.stdout).trim()) || 'git pull failed', CODES.pullFailed);
-    const after = (await gitOk(rootAbs, ['rev-parse', 'HEAD'])).trim();
-    if (before === after) return { updated: 0 };
-    const d = await gitOk(rootAbs, ['diff', '--name-only', '-z', before, after, '--', contentSpec]);
-    return { updated: d.split('\0').filter(Boolean).length };
+    try {
+      return await pullSync(await syncContext(state));
+    } catch (e) {
+      if (e instanceof SyncError) throw new HttpError(409, e.message, e.code);
+      throw e;
+    }
+  }
+
+  /** `{ behind, ahead }` against the upstream after a fetch; `{ behind: 0, ahead: 0 }` when there is none. */
+  async function remote() {
+    if (demo) return { behind: 0, ahead: 0 };
+    const state = await repoState();
+    if (!state.isRepo) return { behind: 0, ahead: 0 };
+    try {
+      return await remoteStatus(await syncContext(state));
+    } catch (e) {
+      if (e instanceof SyncError) return { behind: 0, ahead: 0, error: e.message, code: e.code };
+      throw e;
+    }
+  }
+
+  /** "I'll edit it myself" for a conflicting file: writes it with conflict markers (see sync.mjs). */
+  async function markConflict(body) {
+    if (demo) throw new HttpError(409, DEMO_REASON, CODES.demo);
+    const rel = cleanRelPath(body.path);
+    const state = await repoState();
+    if (!state.isRepo) throw new HttpError(409, state.reason, state.reasonCode);
+    try {
+      return await writeConflictMarkers(await syncContext(state), rel);
+    } catch (e) {
+      if (e instanceof SyncError) throw new HttpError(409, e.message, e.code);
+      throw e;
+    }
+  }
+
+  /** Refuses a write when the client saw another version of the file than the one on disk now. */
+  async function checkBaseHash(req, abs) {
+    const expected = req.headers[BASE_HASH_HEADER];
+    if (typeof expected !== 'string' || !expected) return;
+    let current = Buffer.alloc(0);
+    try {
+      current = await fs.readFile(abs);
+    } catch {
+      // missing = empty
+    }
+    if (sha256(current) !== expected.trim().toLowerCase()) {
+      throw new HttpError(409, 'The file was changed outside the app since it was loaded', CODES.fileChanged);
+    }
   }
 
   // ---------- routing ----------
@@ -537,28 +579,35 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
             'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
           });
         }
+        // Writes wait for running git operations (serial): a file written in the middle of a rebase could end up
+        // in the wrong commit, or be thrown away by `git rebase --abort`.
         if (method === 'PUT') {
           const body = await readBody(req, BODY_LIMIT);
-          const abs = await resolveEntry(rel);
-          await fs.mkdir(path.dirname(abs), { recursive: true });
-          const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.${process.pid}.${Date.now()}.tmp`);
-          await fs.writeFile(tmp, body);
-          await fs.rename(tmp, abs);
+          await serial(async () => {
+            const abs = await resolveEntry(rel);
+            await checkBaseHash(req, abs);
+            await fs.mkdir(path.dirname(abs), { recursive: true });
+            const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.${process.pid}.${Date.now()}.tmp`);
+            await fs.writeFile(tmp, body);
+            await fs.rename(tmp, abs);
+          });
           return send(res, 200, { ok: true });
         }
         if (method === 'DELETE') {
-          const abs = await resolveEntry(rel);
-          if (url.searchParams.get('dir') === '1') await fs.rm(abs, { recursive: true, force: true });
-          else {
-            try {
-              const st = await fs.lstat(abs);
-              if (st.isDirectory()) throw new HttpError(400, 'is a directory (use dir=1)', CODES.isDirectory);
-            } catch (e) {
-              if (e instanceof HttpError) throw e;
+          await serial(async () => {
+            const abs = await resolveEntry(rel);
+            if (url.searchParams.get('dir') === '1') await fs.rm(abs, { recursive: true, force: true });
+            else {
+              try {
+                const st = await fs.lstat(abs);
+                if (st.isDirectory()) throw new HttpError(400, 'is a directory (use dir=1)', CODES.isDirectory);
+              } catch (e) {
+                if (e instanceof HttpError) throw e;
+              }
+              await fs.rm(abs, { force: true });
             }
-            await fs.rm(abs, { force: true });
-          }
-          await removeEmptyParents(abs);
+            await removeEmptyParents(abs);
+          });
           return send(res, 200, { ok: true });
         }
         throw new HttpError(405, 'method not allowed', CODES.methodNotAllowed);
@@ -581,6 +630,14 @@ export function createApiHandler({ root, contentDir = 'content', demo = false, w
         only('POST');
         await readJson(req);
         return send(res, 200, await serial(() => pull()));
+      case '/api/remote-status':
+        only('GET');
+        return send(res, 200, await serial(() => remote()));
+      case '/api/conflict-markers': {
+        only('POST');
+        const body = await readJson(req);
+        return send(res, 200, await serial(() => markConflict(body)));
+      }
       default:
         throw new HttpError(404, 'unknown API route', CODES.unknownRoute);
     }

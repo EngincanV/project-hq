@@ -33,6 +33,20 @@ export function describePath(path: string): PathInfo {
   return { slug, section: 'other', file };
 }
 
+/**
+ * The in-app page that edits `path` as plain Markdown (notes, store and ad notes), or undefined when the app shows
+ * the file in another form (roadmap board, planner, project details) or not at all.
+ */
+export function editorRoute(path: string): string | undefined {
+  const info = describePath(path);
+  if (!info.slug || !path.endsWith('.md')) return undefined;
+  const base = `/p/${encodeURIComponent(info.slug)}`;
+  if (info.section === 'notes' && !info.file.includes('/')) return `${base}/notes/${encodeURIComponent(info.file.replace(/\.md$/, ''))}`;
+  if (info.section === 'stores' && (info.file === 'android.md' || info.file === 'ios.md')) return `${base}/stores`;
+  if (info.section === 'ads' && info.file === 'admob.md') return `${base}/ads`;
+  return undefined;
+}
+
 function sectionFile(rest: string[]): string {
   return rest.length > 1 ? rest.slice(1).join('/') : rest[0];
 }

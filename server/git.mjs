@@ -6,7 +6,7 @@ import { execFile } from 'node:child_process';
  * Run git in `cwd`. Resolves `{ code, stdout, stderr }` (never rejects on a non-zero exit code).
  * @param {string} cwd
  * @param {string[]} args
- * @param {{ timeout?: number }} [opts]
+ * @param {{ timeout?: number, env?: Record<string, string> }} [opts]
  */
 export function git(cwd, args, opts = {}) {
   return new Promise((resolve) => {
@@ -19,7 +19,7 @@ export function git(cwd, args, opts = {}) {
         timeout: opts.timeout ?? 60_000,
         // GIT_LITERAL_PATHSPECS: every path we pass is a real file or folder name, never a glob or `:(magic)`
         // (a file literally named `*.md` must not match its siblings). Folder pathspecs still match their contents.
-        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C', GIT_LITERAL_PATHSPECS: '1' },
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C', GIT_LITERAL_PATHSPECS: '1', ...opts.env },
       },
       (err, stdout, stderr) => {
         const code = err ? (typeof err.code === 'number' ? err.code : 1) : 0;

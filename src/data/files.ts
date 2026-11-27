@@ -1,6 +1,6 @@
 // Hooks for reading and writing single content files.
 import { useCallback, useState } from 'react';
-import { useStorage } from '../storage';
+import { useStorage, type WriteOptions } from '../storage';
 import { useStorageQuery } from './useStorageQuery';
 
 export interface TextFile {
@@ -10,7 +10,8 @@ export interface TextFile {
   /** True when the file does not exist (yet). `save()` creates it. */
   missing: boolean;
   error: Error | null;
-  save: (text: string) => Promise<void>;
+  /** With `expected`, refuses (FileChangedError) when the file no longer holds that text. */
+  save: (text: string, opts?: WriteOptions) => Promise<void>;
   saving: boolean;
 }
 
@@ -21,10 +22,10 @@ export function useTextFile(path: string): TextFile {
   const [saving, setSaving] = useState(0);
 
   const save = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: WriteOptions) => {
       setSaving((n) => n + 1);
       try {
-        await storage.writeText(path, text);
+        await storage.writeText(path, text, opts);
       } finally {
         setSaving((n) => n - 1);
       }

@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { registerFlusher } from '../../data';
-import { MemoryStorage, StorageProvider, type PublishResult, type StorageInfo } from '../../storage';
+import { setLang } from '../../i18n';
+import { FileChangedError, MemoryStorage, StorageProvider, type PublishResult, type StorageInfo } from '../../storage';
 import { ToastProvider } from '../../ui';
 import { PublishButton } from './PublishButton';
 
@@ -164,5 +165,105 @@ describe('PublishButton', () => {
     const { dialog } = await openPanel();
     expect(await within(dialog).findByText(/hq · main/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: /Open the repository/ })).toHaveAttribute('href', 'https://github.com/o/r');
+  });
+});
+
+describe('PublishButton (local sync)', () => {
+  const ROADMAP = 'projects/kp/roadmap.md';
+  const NOTE = 'projects/kp/notes/a.md';
+  const UP = 'a'.repeat(40);
+
+  it('stops before publishing when an editor holds edits for a file changed outside the app', async () => {
+    const storage = seed();
+    const publish = vi.spyOn(storage, 'publish');
+    await storage.writeText(ROADMAP, 'mine');
+    const off = registerFlusher(() => Promise.reject(new FileChangedError(NOTE)));
+    renderButton(storage);
+    const { user, dialog } = await openPanel();
+    await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
+    expect(await within(dialog).findByText(/changed outside the app while you were typing/)).toHaveTextContent(
+      'Pebble Quest › Notes › a.md',
+    );
+    expect(publish).not.toHaveBeenCalled();
+    off();
+  });
+
+  it('settles a sync conflict per file and publishes with the chosen sides', async () => {
+    const storage = seed();
+    const original = storage.publish.bind(storage);
+    const publish = vi
+      .spyOn(storage, 'publish')
+      .mockImplementation(async (message, opts): Promise<PublishResult> =>
+        opts?.resolutions
+          ? original(message, opts)
+          : { ok: false, pushed: false, code: 'rebase_conflict', error: 'conflict', conflicts: [ROADMAP, NOTE], upstream: UP },
+      );
+    const markers = vi.fn(async () => {});
+    Object.assign(storage, { writeConflictMarkers: markers });
+    await storage.writeText(ROADMAP, 'mine');
+    await storage.writeText(NOTE, 'mine too');
+    renderButton(storage);
+    const { user, dialog } = await openPanel();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
+    expect(await within(dialog).findByText('The same lines changed here and on the remote')).toBeInTheDocument();
+    const go = within(dialog).getByRole('button', { name: 'Publish with these choices' });
+    expect(go).toBeDisabled();
+
+    const roadmap = within(dialog).getByRole('group', { name: 'Resolution for Pebble Quest › Roadmap › roadmap.md' });
+    await user.click(within(roadmap).getByRole('button', { name: 'Keep the remote one' }));
+    expect(within(roadmap).getByRole('button', { name: 'Keep the remote one' })).toHaveAttribute('aria-pressed', 'true');
+    const note = within(dialog).getByRole('group', { name: 'Resolution for Pebble Quest › Notes › a.md' });
+    await user.click(within(note).getByRole('button', { name: "I'll edit it myself" }));
+    expect(markers).toHaveBeenCalledWith(NOTE);
+    expect(await within(dialog).findByRole('link', { name: 'Open the file' })).toHaveAttribute('href', '#/p/kp/notes/a');
+    expect(within(dialog).getByText(/between conflict markers/)).toBeInTheDocument();
+
+    await user.click(go);
+    expect(await within(dialog).findByText('Published')).toBeInTheDocument();
+    expect(publish).toHaveBeenLastCalledWith(expect.any(String), {
+      resolutions: { [ROADMAP]: 'theirs', [NOTE]: 'mine' },
+      upstream: UP,
+    });
+  });
+
+  it('shows the translated reason, the files and the git output of a refused publish', async () => {
+    act(() => setLang('tr'));
+    onTestFinished(() => setLang('en'));
+    const storage = seed();
+    vi.spyOn(storage, 'publish').mockResolvedValue({
+      ok: false,
+      pushed: false,
+      code: 'conflict_markers',
+      error: 'Some files still contain conflict markers',
+      files: [NOTE],
+      detail: 'git says hi',
+    });
+    await storage.writeText(ROADMAP, 'mine');
+    renderButton(storage);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /^Yayınla \(/ }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Yayınla' }));
+    expect(await within(dialog).findByText(/hâlâ çakışma işaretleri/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Pebble Quest › Notlar › a.md')).toBeInTheDocument();
+    expect(within(dialog).getByText('git says hi')).toBeInTheDocument();
+  });
+
+  it('says when the remote has new commits and syncs them', async () => {
+    const storage = seed({ mode: 'local', canPublish: true });
+    const status = vi.fn(async () => ({ behind: 2, ahead: 0 }));
+    Object.assign(storage, { remoteStatus: status });
+    const pull = vi.spyOn(storage, 'pull').mockImplementation(async () => {
+      status.mockResolvedValue({ behind: 0, ahead: 0 });
+      return { updated: 3 };
+    });
+    renderButton(storage);
+    const user = userEvent.setup();
+    expect(await screen.findByText('New changes on the remote')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Sync now' }));
+    expect(pull).toHaveBeenCalled();
+    expect(await screen.findByText('3 files brought in from the remote')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('New changes on the remote')).not.toBeInTheDocument());
   });
 });

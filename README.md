@@ -105,6 +105,29 @@ directly: tick a roadmap card when it finishes a feature, turn feedback into car
 picks up the changes within seconds, and you review them in the Publish panel. `npm run setup` adds a `CLAUDE.md` that
 teaches agents the file formats. Read the full guide in [docs/claude-code.md](docs/claude-code.md).
 
+## Sync and conflicts
+
+In local mode (from source or the desktop app) **Publish** does this behind the scenes:
+
+1. It does not start while a git operation (rebase, merge) is half-way done, or when the branch has no upstream but the
+   remote has a branch of that name, and says why.
+2. It writes pending editor saves. If a file changed outside the app (Claude Code, another editor, a pull) while you
+   were typing, it is not overwritten: the editor shows "This file was changed outside the app" with *Use mine*, *Load
+   the version on disk* and *Cancel*. Publishing waits until you choose.
+3. It commits every change in the content folder (the app's and those of tools such as Claude Code) in one commit
+   whose body lists the changed files.
+4. It runs `git fetch` and, when the remote moved on, rebases your commit onto it (no merge commits).
+5. It pushes. When another push got in between, it fetches and rebases once more and pushes again.
+6. The app then re-reads everything from disk, so changes from the remote show up too.
+
+**On a conflict** (the same lines changed here and on the remote) the rebase is undone: nothing is pushed, nothing is
+lost, and your changes stay unpublished. The Publish panel lists the conflicting files; for each, choose *Keep mine*,
+*Keep the remote one* or *I'll edit it myself*. The last one writes the file with both versions between conflict
+markers (`<<<<<<< mine` … `>>>>>>> remote`); edit it, remove the markers and publish again (a file that still has
+markers is never published). The app never force-pushes, runs `reset --hard` or `git clean`. It also runs `git fetch`
+in the background when it opens and when its window gets focus; when the remote has new commits, the top bar shows "New
+changes on the remote" with a **Sync now** button. Details: [docs/publishing.md](docs/publishing.md).
+
 ## Documentation
 
 - [Usage tour](docs/usage.md)

@@ -1,7 +1,8 @@
 // `local` mode: talks to the local API in server/api.mjs (same origin, under ./api/).
+import { FileChangedError, sha256Hex } from './errors';
 import { Listeners } from './listeners';
 import { serverText } from './serverMessages';
-import type { Change, PublishResult, Storage, StorageInfo } from './types';
+import type { Change, PublishOptions, PublishResult, RemoteStatus, Storage, StorageInfo, WriteOptions } from './types';
 
 export class LocalStorage implements Storage {
   private readonly listeners = new Listeners();
@@ -32,8 +33,16 @@ export class LocalStorage implements Storage {
     return new Uint8Array(await res.arrayBuffer());
   }
 
-  writeText(path: string, text: string): Promise<void> {
-    return this.writeBytes(path, new TextEncoder().encode(text));
+  async writeText(path: string, text: string, opts: WriteOptions = {}): Promise<void> {
+    const baseHash = opts.expected === undefined ? undefined : await sha256Hex(opts.expected);
+    const headers: Record<string, string> = baseHash ? { 'X-HQ-Base-Hash': baseHash } : {};
+    try {
+      await this.request('PUT', this.fileUrl(path), new TextEncoder().encode(text) as BodyInit, headers);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'file_changed') throw new FileChangedError(path, err.message);
+      throw err;
+    }
+    this.listeners.emit();
   }
 
   async writeBytes(path: string, bytes: Uint8Array): Promise<void> {
@@ -61,8 +70,9 @@ export class LocalStorage implements Storage {
     this.listeners.emit();
   }
 
-  async publish(message: string): Promise<PublishResult> {
-    const result = await this.json<PublishResult>('POST', '/publish', { message });
+  async publish(message: string, opts: PublishOptions = {}): Promise<PublishResult> {
+    const result = await this.json<PublishResult>('POST', '/publish', { message, resolutions: opts.resolutions, upstream: opts.upstream });
+    // Re-read everything: a sync may have brought in files changed on the remote.
     this.listeners.emit();
     return result;
   }
@@ -71,6 +81,15 @@ export class LocalStorage implements Storage {
     const result = await this.json<{ updated: number }>('POST', '/pull', {});
     this.listeners.emit();
     return result;
+  }
+
+  remoteStatus(): Promise<RemoteStatus> {
+    return this.json<RemoteStatus>('GET', '/remote-status');
+  }
+
+  async writeConflictMarkers(path: string): Promise<void> {
+    await this.json('POST', '/conflict-markers', { path });
+    this.listeners.emit();
   }
 
   async checkOutsideChanges(): Promise<boolean> {
@@ -99,8 +118,8 @@ export class LocalStorage implements Storage {
     return (await res.json()) as T;
   }
 
-  private async request(method: string, url: string, body?: BodyInit): Promise<Response> {
-    const headers: Record<string, string> = {};
+  private async request(method: string, url: string, body?: BodyInit, extraHeaders: Record<string, string> = {}): Promise<Response> {
+    const headers: Record<string, string> = { ...extraHeaders };
     if (method !== 'GET') headers['X-HQ'] = '1'; // required by the API for every non-GET request
     const res = await fetch(url, { method, body, headers, cache: 'no-store' });
     if (!res.ok) throw await apiError(res);
@@ -108,13 +127,25 @@ export class LocalStorage implements Storage {
   }
 }
 
-async function apiError(res: Response): Promise<Error> {
+/** An error response of the local API, with its stable code. */
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | undefined,
+  ) {
+    super(message);
+  }
+}
+
+async function apiError(res: Response): Promise<ApiError> {
   let message = `${res.status} ${res.statusText}`;
+  let code: string | undefined;
   try {
     const data = (await res.json()) as { error?: string; code?: string };
+    code = data.code;
     message = serverText(data.code, data.error) ?? message;
   } catch {
     // body was not JSON; keep the status text
   }
-  return new Error(message);
+  return new ApiError(message, code);
 }

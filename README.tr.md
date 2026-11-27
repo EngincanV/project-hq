@@ -107,6 +107,30 @@ haftanı planlar. Açık uygulama değişiklikleri birkaç saniyede gösterir; s
 geçirirsin. `npm run setup`, ajanlara dosya biçimlerini öğreten bir `CLAUDE.md` ekler. Tam rehber:
 [docs/claude-code.md](docs/claude-code.md).
 
+## Senkronizasyon ve çakışmalar
+
+Yerel modda (kaynaktan ya da masaüstü uygulamasıyla) **Yayınla** arka planda şunları yapar:
+
+1. Yarım kalmış bir git işlemi (rebase, merge) varsa ya da dalın upstream'i ayarlı değilken remote'ta aynı isimde bir
+   dal varsa hiç başlamaz ve nedenini söyler.
+2. Editörde bekleyen yazmaları diske yazar. Sen yazarken dosya dışarıda (Claude Code, başka bir editör, bir pull)
+   değiştiyse üzerine yazmaz: editörde "Bu dosya dışarıdan değiştirildi" uyarısı çıkar ve *Benimkini kullan*,
+   *Diskteki sürümü yükle* ya da *İptal* seçersin. Seçim yapılmadan yayınlama durur.
+3. İçerik klasöründeki tüm değişiklikleri (uygulamanınkiler ve Claude Code gibi araçlarınkiler) tek commit'te toplar;
+   commit gövdesinde değişen dosyalar listelenir.
+4. `git fetch` yapar; remote ilerlemişse commit'ini remote'un üstüne rebase eder (merge commit oluşmaz).
+5. Push eder. Arada başka bir push olduysa fetch + rebase'i bir kez daha yapıp yeniden dener.
+6. Sonra uygulama her şeyi diskten yeniden okur; remote'tan gelen değişiklikler de ekrana yansır.
+
+**Çakışma olursa** (aynı satırlar hem sende hem remote'ta değişmişse) rebase geri alınır: hiçbir şey push edilmez,
+hiçbir değişiklik kaybolmaz ve değişikliklerin yayınlanmamış olarak kalır. Yayınla paneli çakışan dosyaları listeler;
+her biri için *Benimkini tut*, *Remote'takini tut* ya da *Kendim düzenleyeceğim* seçersin. Sonuncusu dosyayı iki
+sürümü de içeren çakışma işaretleriyle (`<<<<<<< mine` … `>>>>>>> remote`) yazar; düzenleyip işaretleri sildikten sonra
+yeniden Yayınla'ya basarsın (işaretler duran bir dosya yayınlanmaz). Uygulama asla force push, `reset --hard` ya da
+`git clean` kullanmaz. Uygulama açılınca ve pencere odaklanınca arka planda `git fetch` yapılır; remote'ta yeni commit
+varsa üst çubukta "Remote'ta yeni değişiklikler var" ve **Senkronize et** düğmesi görünür. Ayrıntılar:
+[docs/publishing.md](docs/publishing.md).
+
 ## Belgeler
 
 Belgeler İngilizcedir.

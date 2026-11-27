@@ -1,5 +1,5 @@
 // The publish panel: review unpublished changes, write the commit message, publish, discard or refresh.
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { CloudUpload, ExternalLink, RefreshCw, TriangleAlert, Undo2 } from 'lucide-react';
 import { flushAll } from '../../data';
 import { useLang, useMessages } from '../../i18n';
@@ -9,6 +9,8 @@ import { friendlyPath, generateMessage, groupChanges } from './changes';
 import { ChangeList } from './ChangeList';
 import { publishMessages } from './messages';
 import { Notice, outcomeKind, PublishOutcome } from './PublishOutcome';
+import { clearResolutions, conflictWith, rememberedResolutions, rememberResolution } from './resolutions';
+import { SyncConflicts, type Choice } from './SyncConflicts';
 import styles from './Publish.module.css';
 
 interface PublishPanelProps {
@@ -47,6 +49,12 @@ function PanelContent({ onClose, changes, names }: Omit<PublishPanelProps, 'open
   const [discard, setDiscard] = useState<DiscardTarget | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [pulling, setPulling] = useState(false);
+  const [choices, setChoices] = useState<Record<string, Choice>>({});
+  const choicesRef = useRef(choices);
+  choicesRef.current = choices;
+  const [marking, setMarking] = useState<string | undefined>();
+  const describeRef = useRef((path: string) => path);
+  describeRef.current = (path: string) => friendlyPath(path, names, t);
 
   const groups = useMemo(() => groupChanges(changes ?? [], names, t), [changes, names, t]);
   const count = changes?.length ?? 0;
@@ -63,14 +71,32 @@ function PanelContent({ onClose, changes, names }: Omit<PublishPanelProps, 'open
       setStatus({ phase: 'publishing' });
       let result: PublishResult;
       try {
-        await flushAll();
+        // An editor whose file changed outside the app holds its edit back: never publish over that silently.
+        const held = await flushAll();
+        if (held.length) {
+          setStatus({ phase: 'done', result: { ok: false, pushed: false, error: t.heldEdits(held.map(describeRef.current).join(', ')) } });
+          return;
+        }
         const fresh = await storage.changes();
         // Flushing may have added changes: regenerate the message unless the user wrote their own.
         const text = edited ? message.trim() : generateMessage(fresh, names, t);
+        const resolved = rememberedResolutions();
         result =
           fresh.length === 0 && !force
             ? { ok: true, pushed: false }
-            : await storage.publish(text, force ? { force: true } : undefined);
+            : await storage.publish(text, force ? { force: true } : resolved);
+        if (result.ok) clearResolutions();
+        if (outcomeKind(result) === 'syncConflict') {
+          // Choices made for this same conflict (e.g. before editing a file by hand) stay selected.
+          conflictWith(result.upstream);
+          const remembered = rememberedResolutions()?.resolutions ?? {};
+          const manual = choicesRef.current;
+          setChoices(
+            Object.fromEntries(
+              result.conflicts!.filter((p) => remembered[p]).map((p) => [p, manual[p] === 'manual' ? 'manual' : remembered[p]]),
+            ),
+          );
+        }
       } catch (err) {
         result = { ok: false, pushed: false, error: errorText(err) };
       }
@@ -78,6 +104,24 @@ function PanelContent({ onClose, changes, names }: Omit<PublishPanelProps, 'open
     },
     [storage, message, edited, names, t],
   );
+
+  const choose = async (path: string, choice: Choice) => {
+    if (choice === 'manual') {
+      if (!storage.writeConflictMarkers) return;
+      setMarking(path);
+      try {
+        await storage.writeConflictMarkers(path);
+      } catch (err) {
+        toast.show(t.markFailed(errorText(err)), 'error');
+        return;
+      } finally {
+        setMarking(undefined);
+      }
+    }
+    // A file edited by hand is published as "mine": the edited file is the local version.
+    rememberResolution(path, choice === 'theirs' ? 'theirs' : 'mine');
+    setChoices((c) => ({ ...c, [path]: choice }));
+  };
 
   const pull = async () => {
     setPulling(true);
@@ -122,10 +166,45 @@ function PanelContent({ onClose, changes, names }: Omit<PublishPanelProps, 'open
   let body;
   let footer;
   if (status.phase === 'done') {
-    body = <PublishOutcome result={status.result} describe={describe} fallbackReason={reason} />;
+    const conflicts = status.result.conflicts ?? [];
+    body =
+      kind === 'syncConflict' ? (
+        <SyncConflicts
+          files={conflicts}
+          choices={choices}
+          busy={marking}
+          onChoose={(path, choice) => void choose(path, choice)}
+          describe={describe}
+          contentPath={info?.contentPath}
+          onOpen={onClose}
+        />
+      ) : (
+        <PublishOutcome result={status.result} describe={describe} fallbackReason={reason} />
+      );
     const back = () => setStatus({ phase: 'review' });
     footer =
-      kind === 'conflict' ? (
+      kind === 'syncConflict' ? (
+        <>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              clearResolutions();
+              setChoices({});
+              back();
+            }}
+          >
+            {t.cancel}
+          </Button>
+          <Button
+            variant="primary"
+            icon={<CloudUpload size={16} />}
+            disabled={marking !== undefined || conflicts.some((p) => !choices[p])}
+            onClick={() => void publish()}
+          >
+            {t.resolveAndPublish}
+          </Button>
+        </>
+      ) : kind === 'conflict' ? (
         <>
           <Button variant="ghost" onClick={back}>
             {t.cancel}
