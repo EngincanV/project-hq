@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-27
+
 ### Changed
 
 - **Publish** (local mode) now syncs safely with the remote: it commits every change in the content folder (also those
@@ -75,6 +77,7 @@ First public release.
 - Hardened the local publish flow against clickjacking, symlinks and git option injection.
 - Ignore environment files, keys and credentials in git.
 
-[Unreleased]: https://github.com/EngincanV/project-hq/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/EngincanV/project-hq/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/EngincanV/project-hq/releases/tag/v0.3.0
 [0.2.0]: https://github.com/EngincanV/project-hq/releases/tag/v0.2.0
 [0.1.0]: https://github.com/EngincanV/project-hq/tree/b564b78
