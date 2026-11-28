@@ -50,7 +50,9 @@ artifacts (`desktop-macOS`, `desktop-Windows`), kept for 7 days.
 ## Signing (optional)
 
 Without these repository secrets the builds are unsigned and still work (users see the first-launch warnings described
-in [desktop.md](desktop.md#first-launch-of-an-unsigned-build), and unsigned macOS builds cannot update themselves).
+in [desktop.md](desktop.md#first-launch-of-an-unsigned-build), and unsigned macOS builds cannot update themselves). On
+macOS such builds are ad-hoc signed with hardened runtime turned off; an app bundle with no signature at all is reported
+as "damaged" after a download on Apple silicon. Only a Developer ID certificate with notarization removes the warning.
 
 | Secret | For |
 | --- | --- |
@@ -60,4 +62,4 @@ in [desktop.md](desktop.md#first-launch-of-an-unsigned-build), and unsigned macO
 
 Locally the same variables work with `npm run desktop:build` (`CSC_LINK` and `CSC_KEY_PASSWORD` on macOS); see
 [`electron-builder.yml`](../electron-builder.yml). To make a local build that matches an unsigned CI build on macOS, run
-`CSC_IDENTITY_AUTO_DISCOVERY=false npm run desktop:build`.
+`CSC_IDENTITY_AUTO_DISCOVERY=false npm run desktop:build -- -c.mac.identity=- -c.mac.hardenedRuntime=false`.

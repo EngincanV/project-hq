@@ -47,8 +47,9 @@ Project HQ is an early `0.x` release, so expect some rough edges.
 1. Download the latest version from [Releases](https://github.com/EngincanV/project-hq/releases): the `.dmg` for macOS
    (`arm64` for Apple silicon, `x64` for Intel) or the `Setup .exe` for Windows.
 2. Builds are unsigned, so the first launch needs one extra step:
-   - **macOS:** right-click Project HQ in Applications and choose **Open**. If macOS still refuses, run
-     `xattr -cr "/Applications/Project HQ.app"` once.
+   - **macOS:** drag Project HQ into Applications, then run this once in Terminal before you open it:
+     `xattr -dr com.apple.quarantine "/Applications/Project HQ.app"`. Without it, recent macOS versions may say the app
+     is "damaged" or that Apple "could not verify" it. Details in [docs/desktop.md](docs/desktop.md#first-launch-of-an-unsigned-build).
    - **Windows:** on the SmartScreen warning, click **More info**, then **Run anyway**.
 3. Make sure [git](https://git-scm.com) is installed. The app starts with demo content.
 4. Open **Settings > Local repository**, click **Choose folder** and pick your content repository (any git repository;

@@ -10,7 +10,8 @@
 #
 # See docs/releasing.md for the full release steps.
 #
-# Signing is optional. Without these repository secrets the builds are unsigned (see docs/desktop.md):
+# Signing is optional. Without these repository secrets the builds are unsigned (ad-hoc signed on macOS, see
+# docs/desktop.md):
 #   MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD                     Developer ID Application certificate (.p12, base64) + password
 #   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID   notarization (used only when the app is signed)
 #   WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD                     Windows code-signing certificate (.pfx, base64) + password
@@ -97,8 +98,13 @@ jobs:
               done
               echo "macOS: signing enabled"
             else
+              # Without a certificate, sign ad-hoc. A bundle with no signature at all is reported as "damaged" by
+              # Gatekeeper after a download on Apple silicon, with no way to open it from System Settings. Hardened
+              # runtime is turned off for ad-hoc builds only: its library validation rejects the pre-signed Electron
+              # frameworks when the app has no Team ID. Signed builds keep hardened runtime.
               put CSC_IDENTITY_AUTO_DISCOVERY false
-              echo "macOS: no certificate, building unsigned"
+              put EB_MAC_ARGS "-c.mac.identity=- -c.mac.hardenedRuntime=false"
+              echo "macOS: no certificate, building ad-hoc signed"
             fi
           else
             if [ -n "$WIN_CSC_LINK" ]; then
@@ -110,8 +116,10 @@ jobs:
             fi
           fi
 
+      # EB_MAC_ARGS is only set for unsigned macOS builds (see above); it is left unquoted so it splits into arguments.
       - name: Package
-        run: npx electron-builder --publish never
+        shell: bash
+        run: npx electron-builder --publish never $EB_MAC_ARGS
 
       # electron-builder writes the arm64 app to release/mac-arm64 and the x64 app to release/mac. Run the one that
       # matches the runner's CPU.

@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Unsigned macOS builds are now ad-hoc signed (with hardened runtime off), so a downloaded copy no longer opens with
+  "Project HQ is damaged and can't be opened" on Apple silicon. It shows the regular "could not verify" warning, which
+  **System Settings > Privacy & Security > Open Anyway** gets past.
+
+### Changed
+
+- The macOS install steps in the README and `docs/desktop.md` now lead with removing the quarantine flag, since
+  right-click > **Open** no longer skips Gatekeeper on macOS 15 and later.
+
 ## [0.3.0] - 2026-11-27
 
 ### Changed

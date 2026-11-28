@@ -48,8 +48,10 @@ Project HQ erken bir `0.x` sürümüdür; bazı pürüzler olabilir.
 1. Son sürümü [Releases](https://github.com/EngincanV/project-hq/releases) sayfasından indir: macOS için `.dmg`
    (Apple silicon için `arm64`, Intel için `x64`), Windows için `Setup .exe`.
 2. Sürümler imzasızdır, bu yüzden ilk açılışta bir adım daha gerekir:
-   - **macOS:** Uygulamalar klasöründe Project HQ'ya sağ tıkla ve **Aç**'ı seç. macOS yine reddederse bir kez
-     `xattr -cr "/Applications/Project HQ.app"` çalıştır.
+   - **macOS:** Project HQ'yu Uygulamalar klasörüne sürükle, açmadan önce Terminal'de bir kez şunu çalıştır:
+     `xattr -dr com.apple.quarantine "/Applications/Project HQ.app"`. Bu adım olmadan yeni macOS sürümleri uygulamanın
+     "hasarlı" olduğunu ya da Apple'ın onu "doğrulayamadığını" söyleyebilir. Ayrıntılar:
+     [docs/desktop.md](docs/desktop.md#first-launch-of-an-unsigned-build).
    - **Windows:** SmartScreen uyarısında **Ek bilgi**'ye, sonra **Yine de çalıştır**'a tıkla.
 3. [git](https://git-scm.com)'in kurulu olduğundan emin ol. Uygulama demo içerikle açılır.
 4. **Ayarlar > Yerel depo**'yu aç, **Klasör seç**'e tıkla ve içerik deponu seç (herhangi bir git deposu olabilir;

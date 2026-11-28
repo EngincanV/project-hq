@@ -29,13 +29,20 @@ Get the latest version from [GitHub Releases](https://github.com/EngincanV/proje
 Release builds are not code-signed unless the maintainer has added signing certificates, so the operating system warns
 you the first time:
 
-- **macOS** says the app "cannot be opened because the developer cannot be verified" (or that it is "damaged"). In
-  Finder, right-click (or Control-click) **Project HQ** in Applications, choose **Open**, then **Open** again. If macOS
-  still refuses, run this once in Terminal and open the app again:
+- **macOS** marks every downloaded file as quarantined and checks it with Gatekeeper on first launch. For an unsigned
+  build this ends in one of two messages:
+  - **"Project HQ is damaged and can't be opened"**: shown for 0.3.0 and earlier on Apple silicon, whose app bundle has
+    no signature. There is no "Open Anyway" button for this one.
+  - **"Apple could not verify Project HQ is free of malware"**: shown for later, ad-hoc signed builds. Click **Done**,
+    then open **System Settings > Privacy & Security**, scroll down and click **Open Anyway** next to Project HQ.
+
+  The quickest fix for both is to remove the quarantine flag once in Terminal, then open the app as usual:
 
   ```sh
-  xattr -cr "/Applications/Project HQ.app"
+  xattr -dr com.apple.quarantine "/Applications/Project HQ.app"
   ```
+
+  Right-click > **Open** no longer skips the check on macOS 15 (Sequoia) and later.
 
 - **Windows** shows "Windows protected your PC" (SmartScreen). Click **More info**, then **Run anyway**.
 
